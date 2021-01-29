@@ -138,3 +138,6 @@ https://docs.microsoft.com/en-us/azure/developer/python/azure-sdk-example-list-r
 Get hardware profile:
 https://stackoverflow.com/questions/54897836/get-azure-vm-hardware-profile-via-azure-python-sdk
 
+
+
+
