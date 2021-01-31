@@ -1,5 +1,12 @@
 % Manage Azure Infrastructure with Python
 
+I wrote a new Python script called *azruntime*. It helps me manage my Azure VMs. The script is open-source and available on my [azure-scripts Github repository](https://github.com/blinklet/azure-scripts).
+
+![](./azruntime01.png)
+
+I learned a lot about how the Azure Python SDK while working on the *azruntime* project. This post discussed some of the issues I found that were  
+
+
 Authenticate Python applications on your local computer that can manage Azure resources. This enables you to create scripts that help you manage your Azure cloud resources. 
 
 Authenticating applications seems complicated because the Azure Python SDK documentation is targeted at developers writing applications that access Azure services like storage accounts and databases. They use concepts like [Application Registrtion](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app) and [Service Principals](https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals). 
@@ -140,4 +147,7 @@ https://stackoverflow.com/questions/54897836/get-azure-vm-hardware-profile-via-a
 
 
 
+Packaging
+https://packaging.python.org/tutorials/packaging-projects/
 
+pip install -e "git+https://github.com/blinklet/azure-scripts.git#egg=pkg&subdirectory=azruntime"
