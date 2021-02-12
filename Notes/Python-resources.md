@@ -18,6 +18,30 @@ https://tryolabs.com/blog/2020/12/21/top-10-python-libraries-of-2020/
 * [Rich](https://github.com/willmcgugan/rich) : rich text and beautiful formatting in the terminal. 
 
 
+## Python Beyond the basics
+
+https://inventwithpython.com/beyond/
+
+* Introduction
+* Chapter 1 - Dealing with Errors and Asking for Help
+* Chapter 2 - Environment Setup and the Command Line
+* Chapter 3 - Code Formatting with Black
+* Chapter 4 - Choosing Understandable Names
+* Chapter 5 - Finding Code Smells
+* Chapter 6 - Writing Pythonic Code
+* Chapter 7 - Programming Jargon
+* Chapter 8 - Common Python Gotchas
+* Chapter 9 - Esoteric Python Oddities
+* Chapter 10 - Writing Effective Functions
+* Chapter 11 - Comments, Docstrings, and Type Hints
+* Chapter 12 - Organizing Your Code Projects with Git
+* Chapter 13 - Measuring Performance and Big O Algorithm Analysis
+* Chapter 14 - Practice Projects
+* Chapter 15 - Object-Oriented Programming and Classes
+* Chapter 16 - Object-Oriented Programming and Inheritance
+* Chapter 17 - Pythonic OOP: Properties and Dunder Methods
+
+
 ## DiskCache
 
 https://github.com/grantjenks/python-diskcache
@@ -92,30 +116,6 @@ https://htmx.org/
 
 htmx allows you to access [AJAX](https://htmx.org/docs#ajax), [CSS Transitions](https://htmx.org/docs#css_transitions), [WebSockets](https://htmx.org/docs#websockets) and [Server Sent Events](https://htmx.org/docs#sse) directly in HTM
 Best seen via the [examples section](https://htmx.org/examples/) - try some out live on their site
-
-
-## Python Beyond the basics
-
-https://inventwithpython.com/beyond/
-
-* Introduction
-* Chapter 1 - Dealing with Errors and Asking for Help
-* Chapter 2 - Environment Setup and the Command Line
-* Chapter 3 - Code Formatting with Black
-* Chapter 4 - Choosing Understandable Names
-* Chapter 5 - Finding Code Smells
-* Chapter 6 - Writing Pythonic Code
-* Chapter 7 - Programming Jargon
-* Chapter 8 - Common Python Gotchas
-* Chapter 9 - Esoteric Python Oddities
-* Chapter 10 - Writing Effective Functions
-* Chapter 11 - Comments, Docstrings, and Type Hints
-* Chapter 12 - Organizing Your Code Projects with Git
-* Chapter 13 - Measuring Performance and Big O Algorithm Analysis
-* Chapter 14 - Practice Projects
-* Chapter 15 - Object-Oriented Programming and Classes
-* Chapter 16 - Object-Oriented Programming and Inheritance
-* Chapter 17 - Pythonic OOP: Properties and Dunder Methods
 
 
 ## pip-chill - Make requirements with only the packages you need
