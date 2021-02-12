@@ -8,16 +8,6 @@
 * [List of programs written in Python](https://sedimental.org/awesome_python_applications.html)
 
 
-## Top 10 Python libraries of 2020
-
-PythonByte podcast #215
-
-https://tryolabs.com/blog/2020/12/21/top-10-python-libraries-of-2020/
-
-* [Typer](https://github.com/tiangolo/typer) : FastAPI for CLI applications 
-* [Rich](https://github.com/willmcgugan/rich) : rich text and beautiful formatting in the terminal. 
-
-
 ## Python Beyond the basics
 
 https://inventwithpython.com/beyond/
@@ -40,6 +30,16 @@ https://inventwithpython.com/beyond/
 * Chapter 15 - Object-Oriented Programming and Classes
 * Chapter 16 - Object-Oriented Programming and Inheritance
 * Chapter 17 - Pythonic OOP: Properties and Dunder Methods
+
+
+## Top 10 Python libraries of 2020
+
+PythonByte podcast #215
+
+https://tryolabs.com/blog/2020/12/21/top-10-python-libraries-of-2020/
+
+* [Typer](https://github.com/tiangolo/typer) : FastAPI for CLI applications 
+* [Rich](https://github.com/willmcgugan/rich) : rich text and beautiful formatting in the terminal. 
 
 
 ## DiskCache
