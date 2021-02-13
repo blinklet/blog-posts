@@ -8,6 +8,12 @@
 * [List of programs written in Python](https://sedimental.org/awesome_python_applications.html)
 
 
+## Installing Python packages so they can be used from command line
+
+* [pipx](https://github.com/pipxproject/pipx)
+  * Install Python packages globally for cli access. Provides: isolated dependencies to guarantee no version conflicts; the ability to install packages globally without using sudo; and the ability to uninstall a package and its dependencies without affecting other globally installed Python programs.
+
+
 ## Python Beyond the basics
 
 https://inventwithpython.com/beyond/
