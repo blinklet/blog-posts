@@ -1,6 +1,6 @@
-Prerequisites:
+## Prerequisites:
 
-https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04
+[Install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04)
 
 ```
 sudo apt install apt-transport-https
@@ -14,7 +14,7 @@ apt-cache policy docker-ce
 sudo apt install docker-ce
 ```
 
-Create a temporary directory in which to download the containerlab files
+Create a temporary directory in which to download the Containerlab files
 
 ```
 mkdir /tmp/containerlab
@@ -22,9 +22,11 @@ cd /tmp/containerlab
 ```
 
 
-In browser, go to:
+In a web browser, go to the [latest release of Containerlab on GitHub](https://github.com/srl-labs/containerlab/releases/latest) at the following URL:
 
+```
 https://github.com/srl-labs/containerlab/releases/latest
+```
 
 See latest release (in this example, it is 0.13.0)
 
@@ -259,12 +261,56 @@ TODO: update topology file
 
 
 
+
 https://containerlab.srlinux.dev
 
 
 Use the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr).
  
-wget 
+Try:
+
+```
+docker run -d -it \
+  --name frr1 \
+  --mount type=bind,source="$(pwd)"/router1-config/daemons,target=/etc/frr/daemons \
+  frrouting/frr
+```
+```
+ecbf60555b42666838f705deb1179c22d3b99505c218b467c601edee5c20dac3
+docker: Error response from daemon: OCI runtime create failed: container_linux.go:367: starting container process caused: process_linux.go:495: container init caused: rootfs_linux.go:60: mounting "/home/brian/containerlab/lab-examples/frrlab/router1-config/daemons" to rootfs at "/var/lib/docker/overlay2/0ef350bb9cd8ce8017f7d901af944e18e2596358c6a1dd0d7a44aaf600f78175/merged/etc/frr/daemons" caused: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type.
+```
+
+The tried:
+```
+docker run -d -it \
+  --name frr1 \
+  frrouting/frr
+```
+
+But it also failed:
+```
+docker logs frr1
+cannot run start: /etc/frr/daemons does not exist
+```
+
+
+Try volumes:
+```
+docker run -it \
+  --name frr3 \
+  -v `pwd`/router1-config:/etc/frr frrouting/frr:latest
+```
+
+
+
+docker run -d \
+--name frr1 \
+--mount type=bind,source="$(pwd)"/router1-config/daemons,target=/etc/frr/daemons \
+frrouting/frr
+
+
+
+docker run -it --rm -v `pwd`/docker/etc:/etc/frr frr:latest
 
 
 /usr/bin/containerlab
