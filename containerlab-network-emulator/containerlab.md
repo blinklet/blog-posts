@@ -244,6 +244,11 @@ Management network *clab* is managed by docker and assigns IP address to each no
 Copy the standard [FRR daemons config file](https://docs.frrouting.org/en/latest/setup.html#daemons-configuration-file) from the FRR documentation to the directory and change ospfd, ospf6d, and ldpd to "yes".
 
 
+
+
+## Configure nodes
+
+
 Connect to PC1:
 
 ```
@@ -252,16 +257,20 @@ docker exec -it clab-frrlab-PC1 /bin/ash
 ```
 ip addr add 192.168.11.2/24 dev eth1
 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
-ip route delete default
+ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
 exit
 ```
+
+> If you are using network traffic generators, you may want to delete the default route (`ip route delete default`) so if someone makes a mistake during testing, their test traffic does not get sent to the management network
+
+
 ```
 docker exec -it clab-frrlab-PC2 /bin/ash
 ```
 ```
 ip addr add 192.168.12.2/24 dev eth1
 ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
-ip route delete default
+ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
 exit
 ```
 ```
@@ -270,7 +279,7 @@ docker exec -it clab-frrlab-PC3 /bin/ash
 ```
 ip addr add 192.168.13.2/24 dev eth1
 ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
-ip route delete default
+ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
 exit
 ```
 
@@ -283,23 +292,23 @@ Connect to *vtysh* on Router1:
 docker exec -it clab-frrlab-router1 vtysh
 ```
 ```
-router1# configure terminal 
-router1(config)# service integrated-vtysh-config
-router1(config)# interface eth1
-router1(config-if)# ip address 192.168.1.1/24
-router1(config-if)# interface eth2
-router1(config-if)# ip address 192.168.2.1/24
-router1(config-if)# interface eth3
-router1(config-if)# ip address 192.168.11.1/24'
-router1(config-if)# interface lo
-router1(config-if)# ip address 10.10.10.1/32
-router1(config-if)# exit
-router1(config)# exit
-router1# write memory
-Building Configuration...
-Integrated configuration saved to /etc/frr/frr.conf
-[OK]
-router1# exit
+configure terminal 
+service integrated-vtysh-config
+interface eth1
+ ip address 192.168.1.1/24
+ exit
+interface eth2
+ ip address 192.168.2.1/24
+ exit
+interface eth3
+ ip address 192.168.11.1/24
+ exit
+interface lo
+ ip address 10.10.10.1/32
+ exit
+exit
+write
+exit
 ```
 
 
@@ -309,23 +318,23 @@ Connect to *vtysh* on Router2:
 docker exec -it clab-frrlab-router2 vtysh
 ```
 ```
-router1# configure terminal 
-router1(config)# service integrated-vtysh-config
-router1(config)# interface eth1
-router1(config-if)# ip address 192.168.1.2/24
-router1(config-if)# interface eth2
-router1(config-if)# ip address 192.168.3.1/24
-router1(config-if)# interface eth3
-router1(config-if)# ip address 192.168.12.1/24
-router1(config-if)# interface lo
-router1(config-if)# ip address 10.10.10.2/32
-router1(config-if)# exit
-router1(config)# exit
-router1# write memory
-Building Configuration...
-Integrated configuration saved to /etc/frr/frr.conf
-[OK]
-router1# exit
+configure terminal 
+service integrated-vtysh-config
+interface eth1
+ ip address 192.168.1.2/24
+ exit
+interface eth2
+ ip address 192.168.3.1/24
+ exit
+interface eth3
+ ip address 192.168.12.1/24
+ exit
+interface lo
+ ip address 10.10.10.2/32
+ exit
+exit
+write
+exit
 ```
 
 Connect to *vtysh* on Router3:
@@ -334,36 +343,226 @@ Connect to *vtysh* on Router3:
 docker exec -it clab-frrlab-router3 vtysh
 ```
 ```
-router1# configure terminal 
-router1(config)# service integrated-vtysh-config
-router1(config)# interface eth1
-router1(config-if)# ip address 192.168.2.2/24
-router1(config-if)# interface eth2
-router1(config-if)# ip address 192.168.3.2/24
-router1(config-if)# interface eth3
-router1(config-if)# ip address 192.168.13.1/24
-router1(config-if)# interface lo
-router1(config-if)# ip address 10.10.10.3/32
-router1(config-if)# exit
-router1(config)# exit
-router1# write memory
-Building Configuration...
-Integrated configuration saved to /etc/frr/frr.conf
-[OK]
-router1# exit
+configure terminal 
+service integrated-vtysh-config
+interface eth1
+ ip address 192.168.2.2/24
+ exit
+interface eth2
+ ip address 192.168.3.2/24
+ exit
+interface eth3
+ ip address 192.168.13.1/24
+ exit
+interface lo
+ ip address 10.10.10.3/32
+ exit
+exit
+write
+exit
 ```
+
+### Some quick tests.
+
+Should be able to ping from PC1 to any IP address configured on router1, but not to interfaces on other nodes.
+
+```
+docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # ping -c1 192.168.11.1
+PING 192.168.11.1 (192.168.11.1) 56(84) bytes of data.
+64 bytes from 192.168.11.1: icmp_seq=1 ttl=64 time=0.066 ms
+
+--- 192.168.11.1 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.066/0.066/0.066/0.000 ms
+/ #
+```
+
+### Add OSPF
+
+Connect to *vtysh* on Router1:
+
+```
+docker exec -it clab-frrlab-router1 vtysh
+```
+```
+configure terminal 
+router ospf
+ passive-interface eth3
+ passive-interface lo
+ network 192.168.1.0/24 area 0.0.0.0
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.11.0/24 area 0.0.0.0
+ exit
+exit
+write
+exit
+```
+
+
+Connect to *vtysh* on Router2:
+
+```
+docker exec -it clab-frrlab-router2 vtysh
+```
+```
+configure terminal 
+router ospf
+ passive-interface eth3
+ network 192.168.1.0/24 area 0.0.0.0
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.12.0/24 area 0.0.0.0
+ exit
+exit
+write
+exit
+```
+
+Connect to *vtysh* on Router3:
+
+```
+docker exec -it clab-frrlab-router3 vtysh
+```
+```
+configure terminal 
+router ospf
+ passive-interface eth3
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.13.0/24 area 0.0.0.0
+ exit
+exit
+write
+exit
+```
+
+### OSPF testing
+
+Now, PC1 should be able to ping any interface on any network node
+
+```
+$ docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # traceroute 192.168.13.2
+traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
+ 1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.004 ms
+ 2  192.168.2.2 (192.168.2.2)  0.004 ms  0.005 ms  0.005 ms
+ 3  192.168.13.2 (192.168.13.2)  0.004 ms  0.007 ms  0.004 ms
+/ # exit
+```
+
+Now see impact if the link between R1 and R3 goes down:
+
+```
+docker exec -it clab-frrlab-router1 /bin/ash
+```
+```
+/ # ip link set dev eth2 down
+/ # exit
+```
+```
+$ docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # traceroute 192.168.13.2
+traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
+ 1  192.168.11.1 (192.168.11.1)  0.005 ms  0.004 ms  0.004 ms
+ 2  192.168.1.2 (192.168.1.2)  0.005 ms  0.004 ms  0.002 ms
+ 3  192.168.3.2 (192.168.3.2)  0.002 ms  0.005 ms  0.002 ms
+ 4  192.168.13.2 (192.168.13.2)  0.002 ms  0.007 ms  0.011 ms
+/ # exit
+```
+
+Then, restore link
+
+```
+docker exec -it clab-frrlab-router1 /bin/ash
+```
+```
+/ # ip link set dev eth2 up
+/ # exit
+```
+```
+docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # traceroute 192.168.13.2
+traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
+ 1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.003 ms
+ 2  192.168.2.2 (192.168.2.2)  0.004 ms  0.004 ms  0.002 ms
+ 3  192.168.13.2 (192.168.13.2)  0.002 ms  0.005 ms  0.003 ms
+```
+
+### network defect introduction
+
+Currently, there is no function in containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using containerlab commands.
+
+Maybe use ip and tc commands on the host? Since the veth interfaces are managed by the host?
+
+https://containerlab.srlinux.dev/manual/wireshark/
+
+```
+$ sudo ip netns exec clab-frrlab-router1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
+107: eth3@if108: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether f2:4e:6d:f5:e9:01 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-PC1
+114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
+$
+$ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
+```
+```
+$ docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # traceroute 192.168.13.2
+traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
+ 1  192.168.11.1 (192.168.11.1)  0.007 ms  0.006 ms  0.005 ms
+ 2  192.168.1.2 (192.168.1.2)  0.006 ms  0.009 ms  0.006 ms
+ 3  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.004 ms
+ 4  192.168.13.2 (192.168.13.2)  0.004 ms  0.007 ms  0.004 ms
+/ # exit
+```
+
+
+Then bring the veth back up...
+
+```
+$ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 up
+```
+```
+$ docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # traceroute 192.168.13.2
+traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
+ 1  192.168.11.1 (192.168.11.1)  0.008 ms  0.006 ms  0.003 ms
+ 2  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.005 ms
+ 3  192.168.13.2 (192.168.13.2)  0.005 ms  0.006 ms  0.005 ms
+/ # 
+```
+
+So we see we can impact network behavior using ip commands on the host system. 
 
 
 ### Persistent configuration
 
 
-Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some types of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the sr-linux type
+Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some other types of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the sr-linux type.
 
 
 ### Get lab info
 
 ```
-$ sudo containerlab inspect -a
+$ sudo containerlab inspect --name frrlab
 +---+-----------------+----------+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
 | # |    Topo Path    | Lab Name |        Name         | Container ID |              Image              | Kind  | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------+----------+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
@@ -378,15 +577,21 @@ $ sudo containerlab inspect -a
 
 
 
-### Fixing link issue
+### Stopping individual nodes create problems
 
-I stopped and then started a node PC1 with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. The link between PC1 and Router1 disappeared. Create link again with:
+I stopped and then started a node PC1 with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. The link between PC1 and Router1 disappeared. 
+
+
+I think stopping the container causes the attached veth to disconnect.
+
+
+Create link again with:
 
 ```
 sudo containerlab tools veth create -a clab-frrlab-PC1:eth1 -b clab-frrlab-router1:eth3
 ```
 
-Then, reconfigure the IP address on PC1 (Router1 does not lose its configuration because it is in FRR)
+Then, reconfigure the IP address on PC1 (Router1 does not lose its configuration because it is was not stopped)
 
 ```
 docker exec -it clab-frrlab-PC1 /bin/ash
@@ -396,7 +601,102 @@ ip addr add 192.168.11.2/24 dev eth1
 exit
 ```
 
+
+There's no clab command for stopping and starting individual nodes.
+
 How to pre-configure the PC network? Maybe bind a copy of */etc/network/interfaces* in the topology file?
+
+
+Experiment:
+
+Base state of PC1 and Router1
+
+```
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+95: eth0@if96: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:04 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+108: eth1@if107: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ca:66:10:68:80:cf brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router1
+
+$ sudo ip netns exec clab-frrlab-router1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
+107: eth3@if108: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether f2:4e:6d:f5:e9:01 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-PC1
+114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
+```
+
+Stop PC1 container
+
+```
+$ sudo docker stop clab-frrlab-PC1
+```
+
+Then check links
+
+```
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+Cannot open network namespace "clab-frrlab-PC1": No such file or directory
+$
+$ sudo ip netns exec clab-frrlab-router1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
+114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
+```
+
+I see eth3 is gone also on Router 1
+
+Restart PC1 container
+
+```
+$ sudo docker start clab-frrlab-PC1
+```
+Then check links
+
+
+```
+$ sudo ip netns exec clab-frrlab-router1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
+114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
+$
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+Cannot open network namespace "clab-frrlab-PC1": No such file or directory
+```
+
+Hmmm. No namespace for PC1...
+
+Create link again with:
+
+```
+$ sudo containerlab tools veth create -a clab-frrlab-PC1:eth1 -b clab-frrlab-router1:eth3
+INFO[0000] Creating virtual wire: clab-frrlab-PC1:eth1 <--> clab-frrlab-router1:eth3 
+INFO[0000] veth interface successfully created!         
+$
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+Cannot open network namespace "clab-frrlab-PC1": No such file or directory
+```
+
+
+
+
 
 
 
@@ -410,6 +710,9 @@ Run:
 ```
 containerlab graph
 ```
+
+
+
 
 Then point browser to URL: `https://localhost:50080`
 
@@ -434,10 +737,104 @@ But, because it is not based on a running lab, it does not show the IP addresses
 
 
 
+# Config files
+
+#### Router1:
+
+/etc/frr/frr.conf
+
+```
+frr version 7.5.1_git
+frr defaults traditional
+hostname router1
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.1.1/24
+!
+interface eth2
+ ip address 192.168.2.1/24
+!
+interface eth3
+ ip address 192.168.11.1/24
+!
+interface lo
+ ip address 10.10.10.1/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.1.0/24 area 0.0.0.0
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.11.0/24 area 0.0.0.0
+!
+line vty
+!
+```
+
+#### Router2:
+
+/etc/frr/frr.conf
+
+```
+frr version 7.5.1_git
+frr defaults traditional
+hostname router2
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.1.2/24
+!
+interface eth2
+ ip address 192.168.3.1/24
+!
+interface eth3
+ ip address 192.168.12.1/24
+!
+interface lo
+ ip address 10.10.10.2/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.1.0/24 area 0.0.0.0
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.12.0/24 area 0.0.0.0
+!
+line vty
+!
+```
+
+#### Router3:
+
+/etc/frr/frr.conf
 
 
-
-
+```
+frr version 7.5.1_git
+frr defaults traditional
+hostname router3
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.2.2/24
+!
+interface eth2
+ ip address 192.168.3.2/24
+!
+interface eth3
+ ip address 192.168.13.1/24
+!
+interface lo
+ ip address 10.10.10.3/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.13.0/24 area 0.0.0.0
+!
+line vty
+!
+```
 
 
 
