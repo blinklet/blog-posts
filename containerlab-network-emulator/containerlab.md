@@ -236,87 +236,9 @@ Management network *clab* is managed by docker and assigns IP address to each no
 
 
 
-Config file for each FRR router
-
-router1.cfg
-
-```
-interface eth1
- ip address 192.168.1.1/24
-!
-interface eth2
- ip address 192.168.2.1/24
-!
-interface eth3
- ip address 192.168.11.1/24
-!
-interface lo
- ip address 10.10.10.1/32
-!
-```
- 
-router2.cfg
-
-```
-interface eth1
- ip address 192.168.1.2/24
-!
-interface eth2
- ip address 192.168.3.1/24
-!
-interface eth3
- ip address 192.168.12.1/24
-!
-interface lo
- ip address 10.10.10.2/32
-!
-```
-
-router3.cfg
-
-```
-interface eth1
- ip address 192.168.2.2/24
-!
-interface eth2
- ip address 192.168.3.2/24
-!
-interface eth3
- ip address 192.168.13.1/24
-!
-interface lo
- ip address 10.10.10.3/32
-!
-```
-
-Setup on each PC
-
-PC1.cfg
-
-```
-ip addr add 192.168.11.2/24 dev eth1 
-ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
-ip route delete default
-```
-
-Note I delete the default route so that I can be sure packets I send from PC1 to the FRR routers do not pass through the management network.
 
 
-PC2.cfg
 
-```
-ip addr add 192.168.12.2/24 dev eth1 
-ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
-ip route delete default
-```
-
-PC3.cfg
-
-```
-ip addr add 192.168.13.2/24 dev eth1 
-ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
-ip route delete default
-```
 
 
 Copy the standard [FRR daemons config file](https://docs.frrouting.org/en/latest/setup.html#daemons-configuration-file) from the FRR documentation to the directory and change ospfd, ospf6d, and ldpd to "yes".
