@@ -764,6 +764,9 @@ So...
 ```
 $ sudo ln -sf /proc/30854/ns/net /var/run/netns/clab-frrlab-PC1
 ```
+
+Then...
+
 ```
 $ sudo ip netns list
 clab-frrlab-PC1 (id: 4)
@@ -787,6 +790,34 @@ $ sudo ip netns exec clab-frrlab-PC1 ip link
 ```
 
 Back in business!!!
+
+
+Then destroy the topology
+
+```
+$ sudo clab destroy --topo frrlab.clab.yml
+INFO[0000] Parsing & checking topology file: frrlab.clab.yml 
+INFO[0000] Destroying container lab: frrlab             
+INFO[0000] Removed container: clab-frrlab-PC2           
+INFO[0011] Removed container: clab-frrlab-PC1           
+INFO[0011] Removed container: clab-frrlab-router2       
+INFO[0011] Removed container: clab-frrlab-router1       
+INFO[0012] Removed container: clab-frrlab-PC3           
+INFO[0012] Removed container: clab-frrlab-router3       
+INFO[0012] Removing container entries from /etc/hosts file 
+INFO[0012] Deleting docker network 'clab'...     
+```
+
+Seems to clean up everything OK
+
+
+$ sudo ip netns list
+
+$ sudo ip netns list-id
+$ sudo ls -l /var/run/netns
+total 0
+
+
 
 
 ### Graph
