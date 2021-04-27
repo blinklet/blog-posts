@@ -694,11 +694,99 @@ $ sudo ip netns exec clab-frrlab-PC1 ip link
 Cannot open network namespace "clab-frrlab-PC1": No such file or directory
 ```
 
+Then, when I reconfigure  eth1 on PC1 (remember the FRR config still existed on Router1 so I did not need to reconfigure that side), the connection works...
+
+```
+$ docker exec -it clab-frrlab-PC1 /bin/ash
+```
+```
+/ # ip addr add 192.168.11.2/24 dev eth1
+/ # ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+/ # ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+/ # ping 192.168.13.2
+PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
+64 bytes from 192.168.13.2: icmp_seq=1 ttl=62 time=0.272 ms
+64 bytes from 192.168.13.2: icmp_seq=2 ttl=62 time=0.056 ms
+^C
+--- 192.168.13.2 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1004ms
+rtt min/avg/max/mdev = 0.056/0.164/0.272/0.108 ms
+/ # exit
+```
+
+But container lab has lost track of the veth pair and PC1 no longer has a namespace named clab-frrlab-PC1. Actually the host seems to have lost track of the network namespace clab-frrlab-PC1.
+
+```
+$ sudo ip netns list
+clab-frrlab-PC2 (id: 5)
+clab-frrlab-PC1
+clab-frrlab-router1 (id: 3)
+clab-frrlab-PC3 (id: 2)
+clab-frrlab-router3 (id: 1)
+clab-frrlab-router2 (id: 0)
+```
+
+So, clab-frrlab-PC1 has no netnsid (it should be 4).
+
+```
+$ ip netns list-id
+nsid 0 
+nsid 1 
+nsid 2 
+nsid 3 
+nsid 4 
+nsid 5
+```
+
+But nsid 4 still exists so somehow there's a disconnect.
 
 
+```
+ls -l /var/run/netns
+total 0
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC1 -> /proc/27782/ns/net
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC2 -> /proc/27833/ns/net
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC3 -> /proc/27840/ns/net
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router1 -> /proc/27764/ns/net
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router2 -> /proc/27714/ns/net
+lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router3 -> /proc/27823/ns/net
+```
 
+What proc id is clab-frrlab-PC1 using?
 
+```
+$ docker inspect --format '{{.State.Pid}}' clab-frrlab-PC1
+30854
+```
 
+So...
+
+```
+$ sudo ln -sf /proc/30854/ns/net /var/run/netns/clab-frrlab-PC1
+```
+```
+$ sudo ip netns list
+clab-frrlab-PC1 (id: 4)
+clab-frrlab-PC2 (id: 5)
+clab-frrlab-router1 (id: 3)
+clab-frrlab-PC3 (id: 2)
+clab-frrlab-router3 (id: 1)
+clab-frrlab-router2 (id: 0)
+```
+```
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+```
+```
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+115: eth0@if116: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:04 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+118: eth1@if117: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 2e:32:4d:24:0a:9d brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router1
+```
+
+Back in business!!!
 
 
 ### Graph
