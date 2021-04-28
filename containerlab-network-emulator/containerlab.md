@@ -582,7 +582,19 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 / # exit
 ```
 
-Now see impact if the link between R1 and R3 goes down:
+### network defect introduction
+
+Now see impact if the link between R1 and R3 goes down. 
+
+But how to bring down a link in Containerlab's network topology? Containerlab does not offer any simple abstractions for managing link status. 
+
+Currently, there is no function in containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using containerlab commands.
+
+Docker does not manage the Containerlab links between nodes so we cannot use Docker network commands to disable a link.
+
+We need to use the native Linux networking commands to manage the links.
+
+One simple way is to log into a node and shut down a link on the node. For example, to shut off *eth2* on Router1:
 
 ```
 $ sudo docker exec -it clab-frrlab-router1 /bin/ash
@@ -591,6 +603,9 @@ $ sudo docker exec -it clab-frrlab-router1 /bin/ash
 / # ip link set dev eth2 down
 / # exit
 ```
+
+Then login to PC1 and see how the traceroute to PC3 changes:
+
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
@@ -604,7 +619,7 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 / # exit
 ```
 
-Then, restore link
+Then, restore the link on Router1:
 
 ```
 $ sudo docker exec -it clab-frrlab-router1 /bin/ash
@@ -616,6 +631,9 @@ $ sudo docker exec -it clab-frrlab-router1 /bin/ash
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
+
+And see that the traceroute between PC1 and PC3 goes back to its orogonal path.
+
 ```
 / # traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
@@ -624,13 +642,11 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  3  192.168.13.2 (192.168.13.2)  0.002 ms  0.005 ms  0.003 ms
 ```
 
-### network defect introduction
+Links can also be managed from the host. [Containerlab links are composed of pairs of *veth* interfaces](https://containerlab.srlinux.dev/manual/wireshark/) which are managed in each node's network namespaces.
 
-Currently, there is no function in containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using containerlab commands.
+Each node is in its own network namespace which is named the same as its container name. To bring down a link on Router1 we first list all the links in the namespace, *clab-frrlab-router1*
 
-Maybe use ip and tc commands on the host? Since the veth interfaces are managed by the host?
 
-https://containerlab.srlinux.dev/manual/wireshark/
 
 ```
 $ sudo ip netns exec clab-frrlab-router1 ip link
@@ -645,8 +661,16 @@ $ sudo ip netns exec clab-frrlab-router1 ip link
 114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
     link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
 $
+```
+
+We see device *eth2* is attached to the network namespace *clab-frrlab-router1*. To bring down the device *eth2* in *clab-frrlab-router1* run the following command:
+
+```
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
 ```
+
+Then connect to PC1 and see the results. We see the traceroute from PC1 to PC3 now passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside teh conbtainer.
+
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
@@ -660,15 +684,21 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 / # exit
 ```
 
-
-Then bring the veth back up...
+Then, bring the device back up...
 
 ```
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 up
 ```
+
+Then connect to PC1 again:
+
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
+
+And see that the traceroute from PC1 to PC3 goes back to the normal route, passing through Router1 and Router3.
+
+
 ```
 / # traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
@@ -678,16 +708,203 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 / # 
 ```
 
-So we see we can impact network behavior using ip commands on the host system. 
+So, we see we can impact network behavior using ip commands on the host system. 
+
 
 
 ### Persistent configuration
 
 
-Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some other types of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the sr-linux type.
+Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some other kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind.
+
+So, users who build labs from Linux containers must reconfigure the lab every time it is restarted or must bind configuration files that have hard-coded configurations to each container.
+
+For example, the *network-multitool* containers are based on Alpine Linux so their network configuration is defined in the file */etc/network/interfaces*. The routers are based on FRR, which uses the configuration files */etc/frr/deamons* and *etc/frr/frr.conf*.
+
+
+
+
+
+
+
+
+
+#### PC1:
+
+The PC1 network configuration file should be stored in a subfolder named *PC1*. Create the folder and then edit the *interfaces* file:
+
+```
+$ mkdir pc1
+$ vi pc1/interfaces
+```
+
+Paste the following text into the *pc1/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.11.2/24
+up route add -net 192.168.0.0/16 gw 192.168.11.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.11.1 dev eth1
+```
+
+Save the file.
+
+
+
+#### PC2:
+
+Do the same for PC2:
+
+```
+$ mkdir pc2
+$ vi pc2/interfaces
+```
+
+Paste the following text into the *pc2/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.12.2/24
+up route add -net 192.168.0.0/16 gw 192.168.12.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.12.1 dev eth1
+```
+
+#### PC3:
+
+Do the same for PC2:
+
+```
+$ mkdir pc3
+$ vi pc3/interfaces
+```
+
+Paste the following text into the *pc3/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.13.2/24
+up route add -net 192.168.0.0/16 gw 192.168.13.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
+```
+
+
+#### Router1:
+
+router1/frr.conf
+
+```
+frr version 7.5.1_git
+frr defaults traditional
+hostname router1
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.1.1/24
+!
+interface eth2
+ ip address 192.168.2.1/24
+!
+interface eth3
+ ip address 192.168.11.1/24
+!
+interface lo
+ ip address 10.10.10.1/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.1.0/24 area 0.0.0.0
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.11.0/24 area 0.0.0.0
+!
+line vty
+!
+
+```
+
+#### Router2:
+
+router2/frr.conf
+
+```
+frr version 7.5.1_git
+frr defaults traditional
+hostname router2
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.1.2/24
+!
+interface eth2
+ ip address 192.168.3.1/24
+!
+interface eth3
+ ip address 192.168.12.1/24
+!
+interface lo
+ ip address 10.10.10.2/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.1.0/24 area 0.0.0.0
+
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.12.0/24 area 0.0.0.0
+!
+line vty
+!
+```
+
+#### Router3:
+
+router3/frr.conf
+
+
+```
+
+frr version 7.5.1_git
+frr defaults traditional
+hostname router3
+no ipv6 forwarding
+!
+interface eth1
+ ip address 192.168.2.2/24
+!
+interface eth2
+ ip address 192.168.3.2/24
+!
+interface eth3
+ ip address 192.168.13.1/24
+!
+interface lo
+ ip address 10.10.10.3/32
+!
+router ospf
+ passive-interface eth3
+ network 192.168.2.0/24 area 0.0.0.0
+ network 192.168.3.0/24 area 0.0.0.0
+ network 192.168.13.0/24 area 0.0.0.0
+!
+line vty
+!
+```
+
+
+
+
+
+
 
 
 ### Get lab info
+
+You can get some information about the lab using the *inspect* and *graph* functions.
+
 
 ```
 $ sudo containerlab inspect --name frrlab
@@ -702,6 +919,48 @@ $ sudo containerlab inspect --name frrlab
 | 6 |                 |          | clab-frrlab-router3 | 9f501e040a65 | frrouting/frr:v7.5.1            | linux |       | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
 +---+-----------------+----------+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
 ```
+
+The graph function, however, does not appear to work
+
+
+Run:
+
+```
+$ sudo containerlab graph
+```
+
+
+Then point browser to URL: `https://localhost:50080`
+
+No image. Did not detect running lab and render it.
+
+
+```
+$ sudo clab graph --offline --topo frrlab.clab.yml
+```
+
+Gives picture below:
+
+![](./Images/clab-graph-001.png)
+
+But, because it is not based on a running lab, it does not show the IP addresses
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -948,33 +1207,6 @@ total 0
 
 
 
-### Graph
-
-does not appear to work
-
-Run:
-
-```
-$ sudo containerlab graph
-```
-
-
-
-
-Then point browser to URL: `https://localhost:50080`
-
-No image. Did not detect running lab and render it.
-
-
-```
-$ sudo clab graph --offline --topo frrlab.clab.yml
-```
-
-Gives picture below:
-
-![](./Images/clab-graph-001.png)
-
-But, because it is not based on a running lab, it does not show the IP addresses
 
 
 
@@ -984,104 +1216,6 @@ But, because it is not based on a running lab, it does not show the IP addresses
 
 
 
-# Config files
-
-#### Router1:
-
-/etc/frr/frr.conf
-
-```
-frr version 7.5.1_git
-frr defaults traditional
-hostname router1
-no ipv6 forwarding
-!
-interface eth1
- ip address 192.168.1.1/24
-!
-interface eth2
- ip address 192.168.2.1/24
-!
-interface eth3
- ip address 192.168.11.1/24
-!
-interface lo
- ip address 10.10.10.1/32
-!
-router ospf
- passive-interface eth3
- network 192.168.1.0/24 area 0.0.0.0
- network 192.168.2.0/24 area 0.0.0.0
- network 192.168.11.0/24 area 0.0.0.0
-!
-line vty
-!
-```
-
-#### Router2:
-
-/etc/frr/frr.conf
-
-```
-frr version 7.5.1_git
-frr defaults traditional
-hostname router2
-no ipv6 forwarding
-!
-interface eth1
- ip address 192.168.1.2/24
-!
-interface eth2
- ip address 192.168.3.1/24
-!
-interface eth3
- ip address 192.168.12.1/24
-!
-interface lo
- ip address 10.10.10.2/32
-!
-router ospf
- passive-interface eth3
- network 192.168.1.0/24 area 0.0.0.0
- network 192.168.3.0/24 area 0.0.0.0
- network 192.168.12.0/24 area 0.0.0.0
-!
-line vty
-!
-```
-
-#### Router3:
-
-/etc/frr/frr.conf
-
-
-```
-frr version 7.5.1_git
-frr defaults traditional
-hostname router3
-no ipv6 forwarding
-!
-interface eth1
- ip address 192.168.2.2/24
-!
-interface eth2
- ip address 192.168.3.2/24
-!
-interface eth3
- ip address 192.168.13.1/24
-!
-interface lo
- ip address 10.10.10.3/32
-!
-router ospf
- passive-interface eth3
- network 192.168.2.0/24 area 0.0.0.0
- network 192.168.3.0/24 area 0.0.0.0
- network 192.168.13.0/24 area 0.0.0.0
-!
-line vty
-!
-```
 
 
 
