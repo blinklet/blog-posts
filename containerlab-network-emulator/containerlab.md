@@ -712,91 +712,24 @@ So, we see we can impact network behavior using ip commands on the host system.
 
 
 
-### Persistent configuration
+## Persistent configuration
 
 
 Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some other kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind.
 
 So, users who build labs from Linux containers must reconfigure the lab every time it is restarted or must bind configuration files that have hard-coded configurations to each container.
 
-For example, the *network-multitool* containers are based on Alpine Linux so their network configuration is defined in the file */etc/network/interfaces*. The routers are based on FRR, which uses the configuration files */etc/frr/deamons* and *etc/frr/frr.conf*.
+In this section, I will show you how to integrate configuration files into the lab directory and topology file so you can start a lab in a defined initial state.
 
+### Persistent configuration for FRR routers
 
+The routers in this example are based on FRR, which uses the configuration files */etc/frr/deamons* and *etc/frr/frr.conf*. 
 
-
-
-
-
-
-
-#### PC1:
-
-The PC1 network configuration file should be stored in a subfolder named *PC1*. Create the folder and then edit the *interfaces* file:
-
-```
-$ mkdir pc1
-$ vi pc1/interfaces
-```
-
-Paste the following text into the *pc1/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.11.2/24
-up route add -net 192.168.0.0/16 gw 192.168.11.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.11.1 dev eth1
-```
-
-Save the file.
-
-
-
-#### PC2:
-
-Do the same for PC2:
-
-```
-$ mkdir pc2
-$ vi pc2/interfaces
-```
-
-Paste the following text into the *pc2/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.12.2/24
-up route add -net 192.168.0.0/16 gw 192.168.12.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.12.1 dev eth1
-```
-
-#### PC3:
-
-Do the same for PC2:
-
-```
-$ mkdir pc3
-$ vi pc3/interfaces
-```
-
-Paste the following text into the *pc3/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.13.2/24
-up route add -net 192.168.0.0/16 gw 192.168.13.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
-```
-
+Create an *frr.conf* file for each router and save each file in its lab folder's router directory.
 
 #### Router1:
 
-router1/frr.conf
+Create the configuration file for Router1 and save it in *router1/frr.conf*.
 
 ```
 frr version 7.5.1_git
@@ -829,7 +762,7 @@ line vty
 
 #### Router2:
 
-router2/frr.conf
+Create the configuration file for Router2 and save it in *router2/frr.conf*.
 
 ```
 frr version 7.5.1_git
@@ -862,7 +795,7 @@ line vty
 
 #### Router3:
 
-router3/frr.conf
+Create the configuration file for Router3 and save it in *router3/frr.conf*.
 
 
 ```
@@ -893,6 +826,104 @@ router ospf
 line vty
 !
 ```
+
+### Modify the topology file
+
+Edit the *frrlab.yml* file and add the mounts for the *frr.conf* files for each router:
+
+```
+name: frrlab
+
+topology:
+  nodes:
+    router1:
+      kind: linux
+      image: frrouting/frr:v7.5.1
+      binds:
+        - router1/daemons:/etc/frr/daemons
+        - router1/frr.conf:/etc/frr/frr.conf
+    router2:
+      kind: linux
+      image: frrouting/frr:v7.5.1
+      binds:
+        - router2/daemons:/etc/frr/daemons
+        - router2/frr.conf:/etc/frr/frr.conf
+    router3:
+      kind: linux
+      image: frrouting/frr:v7.5.1
+      binds:
+        - router3/daemons:/etc/frr/daemons
+        - router3/frr.conf:/etc/frr/frr.conf
+    PC1:
+      kind: linux
+      image: praqma/network-multitool:latest
+    PC2:
+      kind: linux
+      image: praqma/network-multitool:latest
+    PC3:
+      kind: linux
+      image: praqma/network-multitool:latest
+
+  links:
+    - endpoints: ["router1:eth1", "router2:eth1"]
+    - endpoints: ["router1:eth2", "router3:eth1"]
+    - endpoints: ["router2:eth2", "router3:eth2"]
+    - endpoints: ["PC1:eth1", "router1:eth3"]
+    - endpoints: ["PC2:eth1", "router2:eth3"]
+    - endpoints: ["PC3:eth1", "router3:eth3"]
+```
+
+
+### Persistent configuration for PC network interfaces
+
+Normally, one would save a network configuration file on each PC in the */etc/network* directory, or would save a startup script in one of the network hook directories such as */etc/network/if-up.d*.
+
+However, the container does not have permissions manage its own networking with initialization scripts. The user must connect to the container's shell and run *ip* commands or must configure the container's network namespace. I think it is easier to work with each contoaner's network namespace.
+
+To create a consistent initial network state for each PC container, create a script that runs on the host that will configure the PCs' *eth1* interface and set up some static routes. This is a hack, and is hard-coded so it works for this lab.
+
+Create a file named *PC-interfaces* and save it in the lab directory. Make it executable. The file contents are shown below:
+
+```
+#!/bin/sh
+sudo ip netns exec clab-frrlab-PC1 ip link set eth1 up
+sudo ip netns exec clab-frrlab-PC1 ip addr add 192.168.11.2/24 dev eth1
+sudo ip netns exec clab-frrlab-PC1 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+sudo ip netns exec clab-frrlab-PC1 ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+
+sudo ip netns exec clab-frrlab-PC2 ip link set eth1 up
+sudo ip netns exec clab-frrlab-PC2 ip addr add 192.168.12.2/24 dev eth1
+sudo ip netns exec clab-frrlab-PC2 ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
+sudo ip netns exec clab-frrlab-PC2 ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
+
+sudo ip netns exec clab-frrlab-PC3 ip link set eth1 up
+sudo ip netns exec clab-frrlab-PC3 ip addr add 192.168.13.2/24 dev eth1
+sudo ip netns exec clab-frrlab-PC3 ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
+sudo ip netns exec clab-frrlab-PC3 ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
+```
+
+After you start this lab using the Containerlab topology file, run the *PC-interfaces.sh* script to configure the PCs. The routers will get their initial configuration from each one's mounted *frr.conf* file.
+
+Or, create a small script that starts everything. For example, I created an executable script named *lab.sh* and saved it in the lab directory. The script is shown below:
+
+```
+#!/bin/sh
+clab deploy --topo frrlab.yml
+./PC-interfaces.sh
+```
+
+Now, when I want to start the FRR lab in a known state, I run the command:
+
+```
+$ sudo ./lab.sh
+```
+
+Preparing open-source router labs that have initial configurations is possible with the workarounds I demonstrated, above.
+
+
+
+
+
 
 
 
@@ -944,6 +975,64 @@ Gives picture below:
 ![](./Images/clab-graph-001.png)
 
 But, because it is not based on a running lab, it does not show the IP addresses
+
+
+
+
+# Packet capture
+
+To [capture network traffic on one of the containerlab network connections](https://containerlab.srlinux.dev/manual/wireshark/), we must again access interfaces in the network namespaces for each container.
+
+For example, we know that traffic from PC1 to PC3 will, when all links are up, pass via the link between Router1 and Router3. Let's monitor the traffic on one of the interfaces that make up that connection. 
+
+We know, from our topology file, that interface *eth2* on *Router1* is connected to *eth1* on *Router3*. So, let's look at the traffic on *Router3* *eth1*. 
+
+Router3's network namespace has the same name as the container that run Router3: *clab-frrlab-router3*. So, follow the directions from the Containerlab documentation and run the following command to execute tcpdump and forward the tcpdump output to Wireshark: 
+
+```
+$ sudo ip netns exec clab-frrlab-router3 tcpdump -U -n -i eth1 -w - | wireshark -k -i -
+```
+
+In the above command, tcpdump will send an unbuffered stream (the *-U* option) of packets read on interface *eth1* (the *-i eth1* option) without converting addresses to names (the *-n* option) to standard output (the *-w -* option), which is piped to Wireshark which reads from standard input (the *-i -* option) and starts reading packets immediately (the *-k* option).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1385,4 +1474,73 @@ iface eth1 inet static
        address 192.168.11.2/24
        gateway 192.168.11.1
 EOF
+
+
+
+# Old PC config section
+
+#### PC1:
+
+The PC1 network configuration file should be stored in a subfolder named *PC1*. Create the folder and then edit the *interfaces* file:
+
+```
+$ mkdir pc1
+$ vi pc1/interfaces
+```
+
+Paste the following text into the *pc1/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.11.2/24
+up route add -net 192.168.0.0/16 gw 192.168.11.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.11.1 dev eth1
+```
+
+Save the file.
+
+The interfaces file will work in a Docker container because the network service will not have access to it until after the container starts and then mounts the file into its filesystem. So, we need to run the `ifup -a`
+
+
+#### PC2:
+
+Do the same for PC2:
+
+```
+$ mkdir pc2
+$ vi pc2/interfaces
+```
+
+Paste the following text into the *pc2/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.12.2/24
+up route add -net 192.168.0.0/16 gw 192.168.12.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.12.1 dev eth1
+```
+
+#### PC3:
+
+Do the same for PC2:
+
+```
+$ mkdir pc3
+$ vi pc3/interfaces
+```
+
+Paste the following text into the *pc3/interfaces*
+
+```
+#/etc/network/interfaces
+auto eth1
+iface eth1 inet static
+   address 192.168.13.2/24
+up route add -net 192.168.0.0/16 gw 192.168.13.1 dev eth1
+up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
+```
 
