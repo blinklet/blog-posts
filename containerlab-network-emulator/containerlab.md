@@ -1,6 +1,27 @@
+# Use Containerlab to emulate open-source routers
+
+[Containerlab](https://containerlab.srlinux.dev/) is a new [open-source](https://github.com/srl-labs/containerlab) network emulator developed by Nokia with contributions from volunteers. It provides a command-line-interface for orchestrating and managing container-based networking labs. It starts the containers, builds virtual wiring between them to create lab topologies, and manages labs lifecycle ((From Containerlab home page: https://containerlab.srlinux.dev)).
+
+![](./Images/containerlab-splash-001.png)
+
+Containerlab supports many open-source network operating systems that are published as container images and also supports many commercial router images. Containerlab [supports VM-based networking labs](https://containerlab.srlinux.dev/manual/vrnetlab/) that allow you to run commercial router images in network emulation scenarios. It enables this functionality by porting and modifying functions from the [vrnetlab](https://www.brianlinkletter.com/2019/03/vrnetlab-emulate-networks-using-kvm-and-docker/) network emulator.
+
+Containerlab is intended to be a vendor-neutral network emulator that quickly builds test environments in a devops-style workflow. This post will look at how Containerlab works with the FRR open-source router.
+
+
+
+
+!<--more-->
+
+
+# Install Containerlab
+
+You may [install Containerlab](https://containerlab.srlinux.dev/install/) using your distribution's package manager or you may download and run an install script. In this example, I manually install Containerlab. It's a [Go application](https://golang.org/) so you just need to copy the binary to your path and copy some configuration files.
+
+
 ## Prerequisites:
 
-[Install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04)
+Containerlab runs best on Linux. It works on both Debian and RHEL-based distributions, and can even run in Windows Subsystem for Linux (WSL2). It's main dependancy is Docker so first you must [install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04).
 
 ```
 sudo apt install apt-transport-https
@@ -13,6 +34,8 @@ sudo apt update
 apt-cache policy docker-ce
 sudo apt install -y docker-ce
 ```
+
+## Download and copy files 
 
 Create a temporary directory in which to download the Containerlab files
 
@@ -58,7 +81,7 @@ sudo mv lab-examples /etc/containerlab/
 sudo mv templates /etc/containerlab/
 ```
 
-Test it starts
+Test that it starts:
 
 ```
 $ sudo containerlab version
@@ -86,7 +109,7 @@ Use the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr).
 
 Now, try a sample lab. 
 
-The [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) use a simple YAML syntax. 
+The [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) uses a simple YAML syntax. 
 
 The file starts with the name of the lab, followed by the lab topology. The topology consists of nodes and links.
 
@@ -995,9 +1018,11 @@ $ sudo ip netns exec clab-frrlab-router3 tcpdump -U -n -i eth1 -w - | wireshark 
 
 In the above command, tcpdump will send an unbuffered stream (the *-U* option) of packets read on interface *eth1* (the *-i eth1* option) without converting addresses to names (the *-n* option) to standard output (the *-w -* option), which is piped to Wireshark which reads from standard input (the *-i -* option) and starts reading packets immediately (the *-k* option).
 
+You should see a Wireshark window open on your desktop, displaying packets captured from Router3's *eth1* interface.
 
+![](./Images/clab-wireshark-001.png)
 
-
+Stop the capture and Wireshark with the *Ctrl-C* key combination in the terminal window.
 
 
 
