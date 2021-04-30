@@ -1,33 +1,33 @@
 # Use Containerlab to emulate open-source routers
 
-[Containerlab](https://containerlab.srlinux.dev/) is a new [open-source](https://github.com/srl-labs/containerlab) network emulator developed by Nokia with contributions from volunteers. It provides a command-line-interface for orchestrating and managing container-based networking labs. It starts the containers, builds virtual wiring between them to create lab topologies, and manages labs lifecycle ((From Containerlab home page: https://containerlab.srlinux.dev)).
+[Containerlab](https://containerlab.srlinux.dev/) is a new [open-source](https://github.com/srl-labs/containerlab) network emulator developed by [Nokia](https://www.nokia.com/) with contributions from volunteers. It provides a command-line-interface for orchestrating and managing container-based networking labs. It starts the containers, builds virtual wiring between them to create lab topologies, and manages labs lifecycle ((From Containerlab home page: https://containerlab.srlinux.dev)).
 
 ![](./Images/containerlab-splash-001.png)
 
-Containerlab supports many open-source network operating systems that are published as container images and also supports many commercial router images. Containerlab [supports VM-based networking labs](https://containerlab.srlinux.dev/manual/vrnetlab/) that allow you to run commercial router images in network emulation scenarios. It enables this functionality by porting and modifying functions from the [vrnetlab](https://www.brianlinkletter.com/2019/03/vrnetlab-emulate-networks-using-kvm-and-docker/) network emulator.
+Containerlab supports open-source network operating systems that are published as container images and also supports many commercial router images. Containerlab [supports VM-based network devices](https://containerlab.srlinux.dev/manual/vrnetlab/) so users may run [selected commercial router images](https://containerlab.srlinux.dev/manual/vrnetlab/#supported-vm-products) in network emulation scenarios. 
 
-Containerlab is intended to be a vendor-neutral network emulator that quickly builds test environments in a devops-style workflow. This post will look at how Containerlab works with the FRR open-source router.
-
-
-
+Containerlab is intended to be a vendor-neutral network emulator that quickly builds test environments in a devops-style workflow. This post will review how Containerlab works with the [FRR open-source router](https://frrouting.org/).
 
 !<--more-->
+
+The Containerlab project provides [excellent documentation](https://containerlab.srlinux.dev/) so I will refer to the documents for some procedures. But Containerlab does not yet document all the steps required to build a lab based on open-source routers taht starts in a pre-defined state. This post will cover the scenario
+
+
+
+
 
 
 # Install Containerlab
 
-You may [install Containerlab](https://containerlab.srlinux.dev/install/) using your distribution's package manager or you may download and run an install script. In this example, I manually install Containerlab. It's a [Go application](https://golang.org/) so you just need to copy the binary to your path and copy some configuration files.
-
+You may [install Containerlab](https://containerlab.srlinux.dev/install/) using your distribution's package manager or you may download and run an install script. Users may also manually install Containerlab. It's a [Go application](https://golang.org/) so one just needs to copy the binary to your path and copy some configuration files to *etc/containerlab*.
 
 ## Prerequisites:
 
 Containerlab runs best on Linux. It works on both Debian and RHEL-based distributions, and can even run in Windows Subsystem for Linux (WSL2). It's main dependancy is Docker so first you must [install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04).
 
 ```
-sudo apt install apt-transport-https
-sudo apt install ca-certificates
-sudo apt install -y curl
-sudo apt install -y software-properties-common
+sudo apt install apt-transport-https ca-certificates
+sudo apt install -y curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
 sudo apt update
@@ -35,56 +35,24 @@ apt-cache policy docker-ce
 sudo apt install -y docker-ce
 ```
 
-## Download and copy files 
+## Install Containerlab
 
-Create a temporary directory in which to download the Containerlab files
-
-```
-mkdir /tmp/containerlab
-cd /tmp/containerlab
-```
-
-
-In a web browser, go to the [latest release of Containerlab on GitHub](https://github.com/srl-labs/containerlab/releases/latest) at the following URL:
+To install Containerlab from its repository, run the containerlab install script:
 
 ```
-https://github.com/srl-labs/containerlab/releases/latest
+bash -c "$(curl -sL https://get-clab.srlinux.dev)"
 ```
 
-See latest release (in this example, it is 0.13.0)
+See the [Containerlab installation documentation](https://containerlab.srlinux.dev/install/) for other ways to install Containerlab, including manual installation for distributions that do not use Debian or RHEL-based packaging tools. 
 
+## Containerlab files
 
-Download the latest release binary:
+The Containerlab installation script copies the Containerlab eecutable file to */usr/bin* and copies lab-example and template files to */etc/containerlab*. The latter direstory is the most interesting because it contains the lab examples that users can use as models for lab development.
 
-```
-wget https://github.com/srl-labs/containerlab/releases/download/v0.13.0/containerlab_0.13.0_Linux_amd64.tar.gz
-```
-
-Unpack the archive
+Test that Containerlab starts:
 
 ```
-tar xf containerlab_0.13.0_Linux_amd64.tar.gz
-rm containerlab_0.13.0_Linux_amd64.tar.gz
-```
-
-Move binary to path
-
-```
-sudo mv containerlab /usr/bin/
-```
-
-Move examples and templates to */etc/containerlab*.
-
-```
-sudo mkdir /etc/containerlab
-sudo mv lab-examples /etc/containerlab/
-sudo mv templates /etc/containerlab/
-```
-
-Test that it starts:
-
-```
-$ sudo containerlab version
+$ containerlab version
 ```
 ```                         _                   _       _
                  _        (_)                 | |     | |
@@ -99,21 +67,19 @@ version: 0.13.0
  source: https://github.com/srl-labs/containerlab
 ```
  
-Create symlink so users can use the "clab" command as a shortcut when using containerlab. This will ensure that any example commands you copy-and-paste from the Containerlab user guide will work.
+# Build a lab using FRR
 
-```
-sudo ln -s /usr/bin/containerlab /usr/bin/clab
-```
+Containerlab supports commercial containerized router appliances such as Nokia's SR Linux and Arista's CEOS. In each case, Containerlab takes into account the specific requirements of each device. If you wish to use commercial containerized network operating systems that are not listed among the [supported device types](https://containerlab.srlinux.dev/manual/kinds/kinds/), you may need to communicate with the Containerlab developers and request that support for your device be added (or, better yet, offer to contribute to the effort). 
 
-Use the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr).
+However, you should be able to any use open-source network operating system, such as Free Range Routing (FRR), that runs on a Linux container in Containerlab. In this example, I will use the [network-multitool](https://hub.docker.com/r/praqma/network-multitool) container and the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr).
 
-Now, try a sample lab. 
+# Topology file 
 
-The [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) uses a simple YAML syntax. 
+Containerlab defines lab topologies in [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) that use a simple YAML syntax. 
 
 The file starts with the name of the lab, followed by the lab topology. The topology consists of nodes and links.
 
-In this example, we will use [FRR](https://hub.docker.com/r/frrouting/frr) containers and [network-multitool](https://hub.docker.com/r/praqma/network-multitool) containers. 
+In this example, we will use [FRR](https://hub.docker.com/r/frrouting/frr) containers and . 
 
 Create a directory for the network emulation scenario's files:
 
@@ -1569,3 +1535,8 @@ up route add -net 192.168.0.0/16 gw 192.168.13.1 dev eth1
 up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
 ```
 
+
+
+
+
+It enables this functionality by porting and modifying functions from the [vrnetlab](https://www.brianlinkletter.com/2019/03/vrnetlab-emulate-networks-using-kvm-and-docker/) network emulator.
