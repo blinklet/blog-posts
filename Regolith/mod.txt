@@ -1,0 +1,9 @@
+mod - r = resize focus window/stop resize mode
+mod - shift - arrow key = move window in workspace
+mod - f = make window fullscreen/go back to normal
+mod - backspace = switch bewteen vertical/horzonatl mode
+
+other 
+mod w = tabbed layout
+mod s = stacked layout
+mod e = switch between horixonal and vertical layout

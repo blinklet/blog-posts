@@ -10,20 +10,17 @@ Containerlab is intended to be a vendor-neutral network emulator that quickly bu
 
 !<--more-->
 
-The Containerlab project provides [excellent documentation](https://containerlab.srlinux.dev/) so I will refer to the documents for some procedures. But Containerlab does not yet document all the steps required to build a lab based on open-source routers taht starts in a pre-defined state. This post will cover the scenario
+The Containerlab project provides [excellent documentation](https://containerlab.srlinux.dev/) so I don't need to write a tutorial. But, Containerlab does not yet document all the steps required to build an open-source router lab that starts in a pre-defined state. This post will cover that scenario.
 
-
-
-
-
+While working through this example, you will learn about most of Containerlab's container-based features. I'll write about running VM-based labs in a future post.
 
 # Install Containerlab
 
-You may [install Containerlab](https://containerlab.srlinux.dev/install/) using your distribution's package manager or you may download and run an install script. Users may also manually install Containerlab. It's a [Go application](https://golang.org/) so one just needs to copy the binary to your path and copy some configuration files to *etc/containerlab*.
+You may [install Containerlab](https://containerlab.srlinux.dev/install/) using your distribution's package manager or you may download and run an install script. Users may also manually install Containerlab because it's a [Go application](https://golang.org/) so users just need to copy the application binary to a directory in their system's path and copy some configuration files to *etc/containerlab*.
 
 ## Prerequisites:
 
-Containerlab runs best on Linux. It works on both Debian and RHEL-based distributions, and can even run in Windows Subsystem for Linux (WSL2). It's main dependancy is Docker so first you must [install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04).
+Containerlab runs best on Linux. It works on both Debian and RHEL-based distributions, and can even run in Windows Subsystem for Linux (WSL2). It's main dependancy is [Docker](https://www.docker.com/) so first you must [install Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04). I am running an Ubuntu 20.04 system.
 
 ```
 sudo apt install apt-transport-https ca-certificates
@@ -37,49 +34,29 @@ sudo apt install -y docker-ce
 
 ## Install Containerlab
 
-To install Containerlab from its repository, run the containerlab install script:
+To install Containerlab from its repository, run the Containerlab install script:
 
 ```
-bash -c "$(curl -sL https://get-clab.srlinux.dev)"
+$ bash -c "$(curl -sL https://get-clab.srlinux.dev)"
 ```
 
 See the [Containerlab installation documentation](https://containerlab.srlinux.dev/install/) for other ways to install Containerlab, including manual installation for distributions that do not use Debian or RHEL-based packaging tools. 
 
 ## Containerlab files
 
-The Containerlab installation script copies the Containerlab eecutable file to */usr/bin* and copies lab-example and template files to */etc/containerlab*. The latter direstory is the most interesting because it contains the lab examples that users can use as models for lab development.
-
-Test that Containerlab starts:
-
-```
-$ containerlab version
-```
-```                         _                   _       _
-                 _        (_)                 | |     | |
- ____ ___  ____ | |_  ____ _ ____   ____  ____| | ____| | _
-/ ___) _ \|  _ \|  _)/ _  | |  _ \ / _  )/ ___) |/ _  | || \
-( (__| |_|| | | | |_( ( | | | | | ( (/ /| |   | ( ( | | |_) )
-\____)___/|_| |_|\___)_||_|_|_| |_|\____)_|   |_|\_||_|____/
-
-version: 0.13.0
- commit: fa230f6
-   date: 2021-04-13T17:37:22Z
- source: https://github.com/srl-labs/containerlab
-```
+The Containerlab installation script copies the Containerlab executable file to */usr/bin* and copies lab-example and template files to */etc/containerlab*. The latter directory is the most interesting because it contains the lab examples that users can use as models for lab development.
  
 # Build a lab using FRR
 
-Containerlab supports commercial containerized router appliances such as Nokia's SR Linux and Arista's CEOS. In each case, Containerlab takes into account the specific requirements of each device. If you wish to use commercial containerized network operating systems that are not listed among the [supported device types](https://containerlab.srlinux.dev/manual/kinds/kinds/), you may need to communicate with the Containerlab developers and request that support for your device be added (or, better yet, offer to contribute to the effort). 
+Containerlab supports commercial containerized router appliances such as Nokia's SR Linux and Arista's CEOS. In each case, Containerlab takes into account the specific requirements of each device. If you wish to use commercial containerized network operating systems that are not listed among the [supported device types](https://containerlab.srlinux.dev/manual/kinds/kinds/), you may need to communicate with the Containerlab developers and request that support for your device be added or, better yet, offer to contribute to the project. 
 
-However, you should be able to any use open-source network operating system, such as Free Range Routing (FRR), that runs on a Linux container in Containerlab. In this example, I will use the [network-multitool](https://hub.docker.com/r/praqma/network-multitool) container and the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr).
+However, Containerlab should be able to any use open-source network operating system, such as Free Range Routing (FRR), that runs on a Linux container. In this example, I will use the [network-multitool](https://hub.docker.com/r/praqma/network-multitool) container and the [FRR container from DockerHub](https://hub.docker.com/r/frrouting/frr) to create nodes in my network emulation scenario.
 
-# Topology file 
+To build a lab, first create a new directory. In that directory, create a Containerlab topology file. You may optionally add any configuration files you wish to mount in the container and, as you will see below, you may need to write some simple shell scripts to ensure all the nodes in the lab start in a pre-defined state.
 
-Containerlab defines lab topologies in [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) that use a simple YAML syntax. 
+## Create a Topology file 
 
-The file starts with the name of the lab, followed by the lab topology. The topology consists of nodes and links.
-
-In this example, we will use [FRR](https://hub.docker.com/r/frrouting/frr) containers and . 
+Containerlab defines lab topologies in [topology definition files](https://containerlab.srlinux.dev/manual/topo-def-file/) that use a simple [YAML](https://yaml.org/) syntax. Look at the topology file examples in the */etc/containerlab/lab-examples* directory for inspiration. 
 
 Create a directory for the network emulation scenario's files:
 
@@ -87,6 +64,8 @@ Create a directory for the network emulation scenario's files:
 $ mkdir -p ~/Documents/frrlab 
 $ cd ~/Documents/frrlab
 ```
+
+The lab in this example will consist of three routers connected in a ring topology and each router will have one PC connected to it. You must plan the topology and determine which ports will connect to each other. 
 
 Use your favorite text editor to create a file named *frrlab.yml* and add the following text to it:
  
@@ -129,17 +108,13 @@ topology:
     - endpoints: ["PC3:eth1", "router3:eth3"]
 ```
 
-Since we are using containers from dockerhub, we need to first login to dockerhub.
+The Containerlab topology file format is self-explanitary. The file starts with the name of the lab, followed by the lab topology. If you wish to run more than one lab at the same time, you must ensure each lab has a different name in the topology file. It defines each device and then it defines the links between devices. You also see it mounts a *daemons* configuration file to each router. We will create those files, next.
 
-```
-$ sudo docker login
-```
+### Add configuration files
 
-Enter your Docker userid and password.
+The FRR network operating system must have a copy of the *daemons* file in its */etc/frr* directory or FRR will not start. As you saw above, Containerlab makes it easy specify which files to mount into each container. 
 
-Copy the standard [FRR daemons config file](https://docs.frrouting.org/en/latest/setup.html#daemons-configuration-file) from the FRR documentation to the directory and change zebra, ospfd, and ldpd to "yes".
-
-Make separate directories for each router:
+Each router needs its own copies of the configuration files. Make separate directories for each router:
 
 ```
 $ mkdir router1
@@ -147,13 +122,13 @@ $ mkdir router2
 $ mkdir router3
 ```
 
-place a copy of the *daemons* file in each router directory
+Copy the standard [FRR daemons config file](https://docs.frrouting.org/en/latest/setup.html#daemons-configuration-file) from the FRR documentation to the *frrlab/router1* directory. Edit the file:
 
 ```
 $ vi router1/daemons
 ```
 
-Paste the text from the standard daemons configuration file, with the zebra, ospfd, and ldpd daemons set to 'yes'.
+Change *zebra*, *ospfd*, and *ldpd* to "yes". The new *frrlab/router1/daemons* file will look like the listing below:
 
 ```
 zebra=yes
@@ -194,18 +169,33 @@ bfdd_options="  --daemon -A 127.0.0.1"
 fabricd_options="  --daemon -A 127.0.0.1"
 ```
 
-Save the file and copy it to the other router folders
+Save the file and copy it to the other router folders so each router has its own copy.
 
 ```
 $ cp router1/daemons router2/daemons
 $ cp router1/daemons router3/daemons
 ```
 
-Then, run the topology file which will download the docker images used to create the PCs and routers, start containers based on the images and connect them together into a virtual network scenario.
+## Start the lab
+
+To start a Containerlab network emulation, run the `clab deploy` command with the new *frrlab* topology file. Containerlab will download the docker images used to create the PCs and routers, start containers based on the images and connect them together.
+
+Since we are using containers from Docker Hub, we need to first login to Docker.
+
+```
+$ sudo docker login
+```
+
+Enter your Docker userid and password.
+
+Now, run the Containerlab command:
 
 ```
 $ sudo clab deploy --topo frrlab.yml
-```
+``` 
+
+Containerlab outputs logs to the terminal while it sets up the lab. If you have any errors in your configuration file, Containerlab outputs descriptive error messages. The lisitng below shows a normal lab setup, based on the *frrlab* tolopogy.
+
 ```
 INFO[0000] Parsing & checking topology file: frrlab.yml 
 INFO[0000] Pulling docker.io/praqma/network-multitool:latest Docker image 
@@ -239,17 +229,23 @@ INFO[0006] Writing /etc/hosts file
 +---+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
 ```
 
+Containerlab outputs a table containing information about the running lab. You can get the same information table later by running the `sudo clab inspect --name frrlab` command.
 
-Connect to Router1:
+In the table, you see each node has an IPv4 address on the management network. If your newtwork nodes run an SSH server, you would be able to connect to them via SSH. However, the containers I am using in this example are both [based on Alpine Linux and do not have *openssh-server* installed](https://unix.stackexchange.com/questions/602646/content-of-etc-network-in-alpine-linux-image) so we will connect to each node using Docker. If you want lab users to have a more realistic experience, you could build new containers based on the *frrouting* and *network-mulitool* containers that also include *openssh-server*. 
+
+## Configure network nodes
+
+Currently, the nodes are running but the network is not configured. To configure the network, log into each node and run its native configuration commands, either in the shell (the *ash* shell in Alpine Linux), or in its router CLI (*vtysh* in FRR).
+
+First, let's look at the "hardware" on Router1, which is the Linux kernel-based network infrastructure configured by Containerlab and Docker. Connect to Router1 linux shell:
 
 ```
-docker exec -it clab-frrlab-router1 /bin/ash
+$ docker exec -it clab-frrlab-router1 /bin/ash
 ```
 
 Check out Router1's Linux kernel's view of the network:
 
 ```
-$ docker exec -it clab-frrlab-router1 /bin/ash
 / # ip link
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
@@ -295,9 +291,9 @@ default via 172.20.20.1 dev eth0
 172.20.20.0/24 dev eth0 proto kernel scope link src 172.20.20.2
 ```
 
-We see four interfaces: *eth0* to *eth3*. Only *eth0* is configured with in IPv4 address.
+We see four interfaces: *eth0* to *eth3*. Only *eth0* is configured with in an IPv4 address.
  
-Exit the Router1 container
+Exit the Router1 container's shell
 
 ```
 / # exit
@@ -306,7 +302,7 @@ $
 
 Note: we cannot ssh into these containers. They are based on Alpine Linux so ssh is not enabled.
 
-[Alpine Linux network configuration](https://unix.stackexchange.com/questions/602646/content-of-etc-network-in-alpine-linux-image)
+
 
 
 The management network *clab* is managed by docker and assigns IP address to each node's *eth0* interface. BUT the wires between nodes are not managed by docker so do not show up in the `docker network ls` command's output.
