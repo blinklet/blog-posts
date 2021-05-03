@@ -237,117 +237,14 @@ In the table, you see each node has an IPv4 address on the management network. I
 
 Currently, the nodes are running but the network is not configured. To configure the network, log into each node and run its native configuration commands, either in the shell (the *ash* shell in Alpine Linux), or in its router CLI (*vtysh* in FRR).
 
-First, let's look at the "hardware" on Router1, which is the Linux kernel-based network infrastructure configured by Containerlab and Docker. Connect to Router1 linux shell:
-
-```
-$ docker exec -it clab-frrlab-router1 /bin/ash
-```
-
-Check out Router1's Linux kernel's view of the network:
-
-```
-/ # ip link
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
-78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
-81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
-/ #
-/ # ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-    inet 172.20.20.2/24 brd 172.20.20.255 scope global eth0
-       valid_lft forever preferred_lft forever
-    inet6 2001:172:20:20::2/64 scope global nodad 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::42:acff:fe14:1402/64 scope link 
-       valid_lft forever preferred_lft forever
-75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
-    inet6 fe80::14df:15ff:fe1d:e773/64 scope link 
-       valid_lft forever preferred_lft forever
-78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
-    inet6 fe80::800b:77ff:fe83:4642/64 scope link 
-       valid_lft forever preferred_lft forever
-81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
-    inet6 fe80::787b:21ff:fe3b:44e8/64 scope link 
-       valid_lft forever preferred_lft forever
-/ #
-/ # ip route
-default via 172.20.20.1 dev eth0 
-172.20.20.0/24 dev eth0 proto kernel scope link src 172.20.20.2
-```
-
-We see four interfaces: *eth0* to *eth3*. Only *eth0* is configured with in an IPv4 address.
- 
-Exit the Router1 container's shell
-
-```
-/ # exit
-$
-```
-
-Note: we cannot ssh into these containers. They are based on Alpine Linux so ssh is not enabled.
-
-
-
-
-The management network *clab* is managed by docker and assigns IP address to each node's *eth0* interface. BUT the wires between nodes are not managed by docker so do not show up in the `docker network ls` command's output.
-
-```
-$ sudo docker network list
-NETWORK ID     NAME      DRIVER    SCOPE
-5d50bc8c730d   bridge    bridge    local
-57578c3a0fad   clab      bridge    local
-49df145231ea   host      host      local
-dba4309b2c9f   none      null      local
-```
-
-And you can see the node container running
-
-```
-$ sudo docker ps
-CONTAINER ID   IMAGE                             COMMAND                  CREATED          STATUS          PORTS                                  NAMES
-29c519c5ecfc   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC2
-a601e70eae76   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC1
-c5515cd75c09   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router2
-ded0dc21fa72   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router3
-1444d4914c9e   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router1
-58bae1a87939   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC3
-
-```
-
-
-
-
-
-
-
-
-
-
-
-## Configure nodes
-
-
-Configure PC1:
+To configure PC1, run Docker to execute a new shell on the container, *clab-frrlab-PC1*.
 
 ```
 $ docker exec -it clab-frrlab-PC1 /bin/ash
 ```
+
+Based on the network plan we creaed when we designed this network, configure PC1's eth1 interface with an IP address and static routes to the external data networks.
+
 ```
 ip addr add 192.168.11.2/24 dev eth1
 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
@@ -355,7 +252,7 @@ ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
 exit
 ```
 
-Configure PC2:
+Configure PC2 in a similar way:
 
 ```
 $ sudo docker exec -it clab-frrlab-PC2 /bin/ash
@@ -381,11 +278,14 @@ exit
 
 
 
-Configure Router1. Connect to *vtysh* on Router1:
+Configure Router1 by running *vtysh* in the Docker container *clab-frrlab-router1*.
 
 ```
 $ sudo docker exec -it clab-frrlab-router1 vtysh
 ```
+
+Enter the following FRR CLI commands to configure interfaces *eth1*, *eth2*, and *eth3* with IP address that match the network design.
+
 ```
 configure terminal 
 service integrated-vtysh-config
@@ -407,7 +307,7 @@ exit
 ```
 
 
-Configure Router2:
+Configure Router2 in a similar way:
 
 ```
 $ sudo docker exec -it clab-frrlab-router2 vtysh
@@ -460,7 +360,7 @@ exit
 
 ### Some quick tests.
 
-Should be able to ping from PC1 to any IP address configured on router1, but not to interfaces on other nodes.
+After configuring the interfaces on each node, you should be able to ping from *PC1* to any IP address configured on *Router1*, but not to interfaces on other nodes.
 
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
@@ -486,11 +386,16 @@ PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 
 ### Add OSPF
 
+So that we can reach all networks in this example, set up a dynamic routing protocol on the FRR routers. In this example, we will set up a simple OSPF area for all networks connected to the routers. 
+
 Connect to *vtysh* on Router1:
 
 ```
 $ sudo docker exec -it clab-frrlab-router1 vtysh
 ```
+
+Add a simple OSPF configuration to Router1:
+
 ```
 configure terminal 
 router ospf
@@ -506,11 +411,16 @@ exit
 ```
 
 
+Configure *Router2* in a similar way. 
+
 Connect to *vtysh* on Router2:
 
 ```
 $ sudo docker exec -it clab-frrlab-router2 vtysh
 ```
+
+Configure OSPF:
+
 ```
 configure terminal 
 router ospf
@@ -529,6 +439,9 @@ Connect to *vtysh* on Router3:
 ```
 $ sudo docker exec -it clab-frrlab-router3 vtysh
 ```
+
+Configure OSPF: 
+
 ```
 configure terminal 
 router ospf
@@ -544,64 +457,57 @@ exit
 
 ### OSPF testing
 
-Now, PC1 should be able to ping any interface on any network node
+Now, *PC1* should be able to ping any interface on any network node. Run the ping command on *PC1* to try to reach *PC3* over the network.
+
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
-```
-```
-/ # ping -c1 192.168.13.2
+$ sudo docker exec -dit clab-frrlab-PC1 ping -c1 192.168.13.2
 PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 64 bytes from 192.168.13.2: icmp_seq=1 ttl=62 time=0.127 ms
 
 --- 192.168.13.2 ping statistics ---
 1 packets transmitted, 1 received, 0% packet loss, time 0ms
 rtt min/avg/max/mdev = 0.127/0.127/0.127/0.000 ms
-/ # 
-/ # traceroute 192.168.13.2
+```
+
+A traceroute shows that the packets pass from *PC1* to *Router1*, then to *Router3*, then to *PC3*:
+
+```
+$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.004 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.005 ms  0.005 ms
  3  192.168.13.2 (192.168.13.2)  0.004 ms  0.007 ms  0.004 ms
-/ # 
-/ # exit
 ```
+
+This shows that the OSPF protocol successfuly set up the routing tables on the Routers so that all nodes on this network can reach each other.
+
 
 ### network defect introduction
 
-Now see impact if the link between R1 and R3 goes down. 
+To further demonstrate that the network configuration is correct, see what happens if the link between *Router1* and *Router3* goes down. If everything works correctly, the OSPF protocol will detect that the link has failed and reroute any traffic going from *PC1* to *PC3* through *Router1* and *Router3* via *Router2*.
 
-But how to bring down a link in Containerlab's network topology? Containerlab does not offer any simple abstractions for managing link status. 
+But, there is no function in Containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using Containerlab commands.
 
-Currently, there is no function in containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using containerlab commands.
+In addition, Docker does not manage the Containerlab links between nodes so we cannot use Docker network commands to disable a link.
 
-Docker does not manage the Containerlab links between nodes so we cannot use Docker network commands to disable a link.
+We need to use native Linux networking commands to manage the links.
 
-We need to use the native Linux networking commands to manage the links.
-
-One simple way is to log into a node and shut down a link on the node. For example, to shut off *eth2* on Router1:
+One simple way is to run the *ip* command on a node to shut down a link on the node. For example, to shut off *eth2* on *Router1*:
 
 ```
-$ sudo docker exec -it clab-frrlab-router1 /bin/ash
-```
-```
-/ # ip link set dev eth2 down
-/ # exit
+$ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 down
 ```
 
-Then login to PC1 and see how the traceroute to PC3 changes:
+Then run the traceroute command on *PC1* and see how the traceroute to *PC3* changes:
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
-```
-```
-/ # traceroute 192.168.13.2
+$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.005 ms  0.004 ms  0.004 ms
  2  192.168.1.2 (192.168.1.2)  0.005 ms  0.004 ms  0.002 ms
  3  192.168.3.2 (192.168.3.2)  0.002 ms  0.005 ms  0.002 ms
  4  192.168.13.2 (192.168.13.2)  0.002 ms  0.007 ms  0.011 ms
-/ # exit
 ```
 
 Then, restore the link on Router1:
@@ -1536,3 +1442,128 @@ up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
 
 
 It enables this functionality by porting and modifying functions from the [vrnetlab](https://www.brianlinkletter.com/2019/03/vrnetlab-emulate-networks-using-kvm-and-docker/) network emulator.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The management network *clab* is managed by docker and assigns IP address to each node's *eth0* interface. BUT the wires between nodes are not managed by docker so do not show up in the `docker network ls` command's output.
+
+```
+$ sudo docker network list
+NETWORK ID     NAME      DRIVER    SCOPE
+5d50bc8c730d   bridge    bridge    local
+57578c3a0fad   clab      bridge    local
+49df145231ea   host      host      local
+dba4309b2c9f   none      null      local
+```
+
+And you can see the node container running
+
+```
+$ sudo docker ps
+CONTAINER ID   IMAGE                             COMMAND                  CREATED          STATUS          PORTS                                  NAMES
+29c519c5ecfc   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC2
+a601e70eae76   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC1
+c5515cd75c09   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router2
+ded0dc21fa72   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router3
+1444d4914c9e   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router1
+58bae1a87939   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC3
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+First, let's look at the "hardware" on Router1, which is the Linux kernel-based network infrastructure configured by Containerlab and Docker. Connect to Router1 linux shell:
+
+```
+$ docker exec -it clab-frrlab-router1 /bin/ash
+```
+
+Check out Router1's Linux kernel's view of the network:
+
+```
+/ # ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
+78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+/ #
+/ # ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.20.20.2/24 brd 172.20.20.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 2001:172:20:20::2/64 scope global nodad 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:acff:fe14:1402/64 scope link 
+       valid_lft forever preferred_lft forever
+75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
+    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
+    inet6 fe80::14df:15ff:fe1d:e773/64 scope link 
+       valid_lft forever preferred_lft forever
+78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
+    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::800b:77ff:fe83:4642/64 scope link 
+       valid_lft forever preferred_lft forever
+81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
+    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::787b:21ff:fe3b:44e8/64 scope link 
+       valid_lft forever preferred_lft forever
+/ #
+/ # ip route
+default via 172.20.20.1 dev eth0 
+172.20.20.0/24 dev eth0 proto kernel scope link src 172.20.20.2
+```
+
+We see four interfaces: *eth0* to *eth3*. Only *eth0* is configured with in an IPv4 address.
+ 
+Exit the Router1 container's shell
+
+```
+/ # exit
+$
+```
+
