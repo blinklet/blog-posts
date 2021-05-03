@@ -487,19 +487,17 @@ This shows that the OSPF protocol successfuly set up the routing tables on the R
 
 To further demonstrate that the network configuration is correct, see what happens if the link between *Router1* and *Router3* goes down. If everything works correctly, the OSPF protocol will detect that the link has failed and reroute any traffic going from *PC1* to *PC3* through *Router1* and *Router3* via *Router2*.
 
-But, there is no function in Containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using Containerlab commands.
+But, there is no function in Containerlab that allows the user to control the network connections between nodes. So you cannot disable a link or introduce link errors using Containerlab commands. In addition, Docker does not manage the Containerlab links between nodes so we cannot use Docker network commands to disable a link.
 
-In addition, Docker does not manage the Containerlab links between nodes so we cannot use Docker network commands to disable a link.
+[Containerlab links are composed of pairs of *veth* interfaces](https://containerlab.srlinux.dev/manual/wireshark/) which are managed in each node's network namespaces. We need to use Docker to run network commands on each container or use native Linux networking commands to manage the links in each node's network namespace..
 
-We need to use native Linux networking commands to manage the links.
-
-One simple way is to run the *ip* command on a node to shut down a link on the node. For example, to shut off *eth2* on *Router1*:
+One simple way to interupt a network link is to run the *ip* command on a node to shut down a link on the node. For example, to shut off *eth2* on *Router1*:
 
 ```
 $ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 down
 ```
 
-Then run the traceroute command on *PC1* and see how the traceroute to *PC3* changes:
+Then, run the traceroute command on *PC1* and see how the path to *PC3* changes:
 
 ```
 $ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
@@ -510,34 +508,25 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  4  192.168.13.2 (192.168.13.2)  0.002 ms  0.007 ms  0.011 ms
 ```
 
-Then, restore the link on Router1:
+We see that the packets now travel from *PC1* to *PC3* via *Router1*, *Router2*, and *Router3*.
+
+Restore the link on Router1:
 
 ```
-$ sudo docker exec -it clab-frrlab-router1 /bin/ash
-```
-```
-/ # ip link set dev eth2 up
-/ # exit
-```
-```
-$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
+$ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 up
 ```
 
 And see that the traceroute between PC1 and PC3 goes back to its orogonal path.
 
 ```
-/ # traceroute 192.168.13.2
+$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.003 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.004 ms  0.002 ms
  3  192.168.13.2 (192.168.13.2)  0.002 ms  0.005 ms  0.003 ms
 ```
 
-Links can also be managed from the host. [Containerlab links are composed of pairs of *veth* interfaces](https://containerlab.srlinux.dev/manual/wireshark/) which are managed in each node's network namespaces.
-
-Each node is in its own network namespace which is named the same as its container name. To bring down a link on Router1 we first list all the links in the namespace, *clab-frrlab-router1*
-
-
+Links can also be managed by *ip* commands executed on the host system. Each node is in its own network namespace which is named the same as its container name. To bring down a link on Router1 we first list all the links in the namespace, *clab-frrlab-router1*
 
 ```
 $ sudo ip netns exec clab-frrlab-router1 ip link
@@ -560,55 +549,48 @@ We see device *eth2* is attached to the network namespace *clab-frrlab-router1*.
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
 ```
 
-Then connect to PC1 and see the results. We see the traceroute from PC1 to PC3 now passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside teh conbtainer.
+We see the traceroute from PC1 to PC3 again passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
-```
-```
-/ # traceroute 192.168.13.2
+$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.007 ms  0.006 ms  0.005 ms
  2  192.168.1.2 (192.168.1.2)  0.006 ms  0.009 ms  0.006 ms
  3  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.004 ms
  4  192.168.13.2 (192.168.13.2)  0.004 ms  0.007 ms  0.004 ms
-/ # exit
 ```
 
-Then, bring the device back up...
+Then, bring the device back up:
 
 ```
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 up
 ```
 
-Then connect to PC1 again:
-
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
 
-And see that the traceroute from PC1 to PC3 goes back to the normal route, passing through Router1 and Router3.
+Then, see that the traceroute from PC1 to PC3 goes back to the normal route, passing through Router1 and Router3.
 
 
 ```
-/ # traceroute 192.168.13.2
+$ sudo docker exec -dit clab-frrlab-PC1 /traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.008 ms  0.006 ms  0.003 ms
  2  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.005 ms
  3  192.168.13.2 (192.168.13.2)  0.005 ms  0.006 ms  0.005 ms
-/ # 
 ```
 
-So, we see we can impact network behavior using ip commands on the host system. 
+So, we see we can impact network behavior using *ip* commands on the host system. 
 
 
 
 ## Persistent configuration
 
 
-Containerlab does not save the configuration files for Linux containers. It will [save configuration files for some other kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind.
+Containerlab does not save the configuration files for Linux containers. However, it will [save configuration files for some other kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind.
 
-So, users who build labs from Linux containers must reconfigure the lab every time it is restarted or must bind configuration files that have hard-coded configurations to each container.
+Users who build labs from Linux containers must reconfigure the lab every time it is restarted or must bind configuration files that have hard-coded configurations to each container.
 
 In this section, I will show you how to integrate configuration files into the lab directory and topology file so you can start a lab in a defined initial state.
 
