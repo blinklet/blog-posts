@@ -461,7 +461,7 @@ Now, *PC1* should be able to ping any interface on any network node. Run the pin
 
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 ping -c1 192.168.13.2
+$ sudo docker exec clab-frrlab-PC1 ping -c1 192.168.13.2
 PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 64 bytes from 192.168.13.2: icmp_seq=1 ttl=62 time=0.127 ms
 
@@ -473,7 +473,7 @@ rtt min/avg/max/mdev = 0.127/0.127/0.127/0.000 ms
 A traceroute shows that the packets pass from *PC1* to *Router1*, then to *Router3*, then to *PC3*:
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.004 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.005 ms  0.005 ms
@@ -500,7 +500,7 @@ $ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 down
 Then, run the traceroute command on *PC1* and see how the path to *PC3* changes:
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.005 ms  0.004 ms  0.004 ms
  2  192.168.1.2 (192.168.1.2)  0.005 ms  0.004 ms  0.002 ms
@@ -513,13 +513,13 @@ We see that the packets now travel from *PC1* to *PC3* via *Router1*, *Router2*,
 Restore the link on Router1:
 
 ```
-$ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 up
+$ sudo docker exec clab-frrlab-router1 ip link set dev eth2 up
 ```
 
-And see that the traceroute between PC1 and PC3 goes back to its original path.
+And see that the traceroute between *PC1* and PC3 goes back to its original path.
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.003 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.004 ms  0.002 ms
@@ -549,10 +549,10 @@ We see device *eth2* is attached to the network namespace *clab-frrlab-router1*.
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
 ```
 
-We see the traceroute from PC1 to PC3 again passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
+We see the traceroute from *PC1* to PC3 again passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
 
 ```
-$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.007 ms  0.006 ms  0.005 ms
  2  192.168.1.2 (192.168.1.2)  0.006 ms  0.009 ms  0.006 ms
@@ -570,7 +570,7 @@ $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 up
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
 
-Then, see that the traceroute from PC1 to PC3 goes back to the normal route, passing through Router1 and Router3.
+Then, see that the traceroute from *PC1* to PC3 goes back to the normal route, passing through Router1 and Router3.
 
 
 ```
@@ -674,7 +674,6 @@ Create the configuration file for Router3 and save it in *router3/frr.conf*.
 
 
 ```
-
 frr version 7.5.1_git
 frr defaults traditional
 hostname router3
@@ -762,12 +761,12 @@ Create a file named *PC-interfaces* and save it in the lab directory. Make it ex
 
 ```
 #!/bin/sh
-sudo docker exec -d clab-frrlab-PC1 ip link set eth1 up
-sudo docker exec -d clab-frrlab-PC1 ip addr add 192.168.11.2/24 dev eth1
-sudo docker exec -d clab-frrlab-PC1 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
-sudo docker exec -d clab-frrlab-PC1 ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+sudo docker exec clab-frrlab-PC1 ip link set eth1 up
+sudo docker exec clab-frrlab-PC1 ip addr add 192.168.11.2/24 dev eth1
+sudo docker exec clab-frrlab-PC1 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+sudo docker exec clab-frrlab-PC1 ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
 
-sudo docker exec -d clab-frrlab-PC2 ip link set eth1 up
+sudo docker exec clab-frrlab-PC2 ip link set eth1 up
 sudo docker exec clab-frrlab-PC2 ip addr add 192.168.12.2/24 dev eth1
 sudo docker exec clab-frrlab-PC2 ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
 sudo docker exec clab-frrlab-PC2 ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
@@ -776,6 +775,12 @@ sudo docker exec clab-frrlab-PC3 ip link set eth1 up
 sudo docker exec clab-frrlab-PC3 ip addr add 192.168.13.2/24 dev eth1
 sudo docker exec clab-frrlab-PC3 ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
 sudo docker exec clab-frrlab-PC3 ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
+```
+
+Make the file executable:
+
+```
+$ chmod +x PC-interfaces.sh
 ```
 
 After you start this lab using the Containerlab topology file, run the *PC-interfaces.sh* script to configure the PCs. The routers will get their initial configuration from each one's mounted *frr.conf* file.
@@ -823,20 +828,17 @@ Run:
 $ sudo containerlab graph --topo frrlab.yml
 ```
 
-
-Then point browser to URL: `https://localhost:50080`. You will see a web page with a network diagram and a table with management information.
+Open a web browser to URL: `https://localhost:50080`. You will see a web page with a network diagram and a table with management information.
 
 ![](./Images/clab-graph-002.png)
 
-For small networks, this is not very useful because it does not show the port names on each node. I think it would be more useful in large network emulation scenarios with dozens of nodes.
-
-
+For small networks, this is not very useful because it does not show the port names on each node. I think it would be more useful in large network emulation scenarios with dozens or hundreds of nodes.
 
 # Packet capture
 
-To [capture network traffic on one of the containerlab network connections](https://containerlab.srlinux.dev/manual/wireshark/), we must again access interfaces in the network namespaces for each container.
+To [capture network traffic on one of the containerlab network connections](https://containerlab.srlinux.dev/manual/wireshark/), one must again access interfaces in the network namespaces for each container.
 
-For example, we know that traffic from PC1 to PC3 will, when all links are up, pass via the link between Router1 and Router3. Let's monitor the traffic on one of the interfaces that make up that connection. 
+For example, we know that traffic from *PC1* to *PC3* will, when all links are up, pass via the link between Router1 and Router3. Let's monitor the traffic on one of the interfaces that make up that connection. 
 
 We know, from our topology file, that interface *eth2* on *Router1* is connected to *eth1* on *Router3*. So, let's look at the traffic on *Router3* *eth1*. 
 
@@ -897,7 +899,7 @@ The following may be a corner case
 
 ### Stopping individual nodes create problems
 
-I stopped and then started a node PC1 with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. The link between PC1 and Router1 disappeared. 
+I stopped and then started a node *PC1* with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. The link between *PC1* and Router1 disappeared. 
 
 
 I think stopping the container causes the attached veth to disconnect.
@@ -909,7 +911,7 @@ Create link again with:
 $ sudo containerlab tools veth create -a clab-frrlab-PC1:eth1 -b clab-frrlab-router1:eth3
 ```
 
-Then, reconfigure the IP address on PC1 (Router1 does not lose its configuration because it is was not stopped)
+Then, reconfigure the IP address on *PC1* (Router1 does not lose its configuration because it is was not stopped)
 
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
@@ -927,7 +929,7 @@ How to pre-configure the PC network? Maybe bind a copy of */etc/network/interfac
 
 Experiment:
 
-Base state of PC1 and Router1
+Base state of *PC1* and Router1
 
 ```
 $ sudo ip netns exec clab-frrlab-PC1 ip link
@@ -951,7 +953,7 @@ $ sudo ip netns exec clab-frrlab-router1 ip link
     link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
 ```
 
-Stop PC1 container
+Stop *PC1* container
 
 ```
 $ sudo docker stop clab-frrlab-PC1
@@ -976,7 +978,7 @@ $ sudo ip netns exec clab-frrlab-router1 ip link
 
 I see eth3 is gone also on Router 1
 
-Restart PC1 container
+Restart *PC1* container
 
 ```
 $ sudo docker start clab-frrlab-PC1
@@ -1012,7 +1014,7 @@ $ sudo ip netns exec clab-frrlab-PC1 ip link
 Cannot open network namespace "clab-frrlab-PC1": No such file or directory
 ```
 
-Then, when I reconfigure  eth1 on PC1 (remember the FRR config still existed on Router1 so I did not need to reconfigure that side), the connection works...
+Then, when I reconfigure  eth1 on *PC1* (remember the FRR config still existed on Router1 so I did not need to reconfigure that side), the connection works...
 
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
@@ -1032,7 +1034,7 @@ rtt min/avg/max/mdev = 0.056/0.164/0.272/0.108 ms
 / # exit
 ```
 
-But container lab has lost track of the veth pair and PC1 no longer has a namespace named clab-frrlab-PC1. Actually the host seems to have lost track of the network namespace clab-frrlab-PC1.
+But container lab has lost track of the veth pair and *PC1* no longer has a namespace named clab-frrlab-PC1. Actually the host seems to have lost track of the network namespace clab-frrlab-PC1.
 
 ```
 $ sudo ip netns list
@@ -1134,385 +1136,3 @@ $ sudo ip netns list
 $ sudo ip netns list-id
 $ sudo ls -l /var/run/netns
 total 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Debugging issue with frrouting/frr:latest
-
-
-
-Then run the command
-
-```
-clab deploy --topo frrlab.clab.yml
-```
-```
-INFO[0000] Parsing & checking topology file: frrlab.clab.yml 
-INFO[0000] Pulling docker.io/praqma/network-multitool:latest Docker image 
-INFO[0010] Done pulling docker.io/praqma/network-multitool:latest 
-INFO[0010] Pulling docker.io/frrouting/frr:latest Docker image 
-INFO[0040] Done pulling docker.io/frrouting/frr:latest  
-WARN[0040] Only 1 vcpu detected on this container host. Most containerlab nodes require at least 2 vcpu 
-INFO[0040] Creating lab directory: /home/brian/containerlab/lab-examples/frrlab/clab-frrlab 
-INFO[0040] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500' 
-INFO[0041] Creating container: PC1                      
-INFO[0041] Creating container: router3                  
-INFO[0041] Creating container: PC2                      
-INFO[0041] Creating container: PC3                      
-INFO[0041] Creating container: router1                  
-INFO[0041] Creating container: router2    
-ERRO[0044] failed to create node router3: Error response from daemon: OCI runtime create failed: container_linux.go:367: starting container process caused: process_linux.go:495: container init caused: rootfs_linux.go:60: mounting "/home/brian/containerlab/lab-examples/frrlab/daemons" to rootfs at "/var/lib/docker/overlay2/c149f1e3f5a6ff3145aeed77164f99e22181a2e5665a4c3ff86ae9243467e331/merged/etc/frr/daemons" caused: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type 
-ERRO[0045] failed to create node router2: Error response from daemon: OCI runtime create failed: container_linux.go:367: starting container process caused: process_linux.go:495: container init caused: rootfs_linux.go:60: mounting "/home/brian/containerlab/lab-examples/frrlab/daemons" to rootfs at "/var/lib/docker/overlay2/4ed66dcfbdc06a3f6c955af27970b3470eb7f661c459cf27d891851b2d93ffef/merged/etc/frr/daemons" caused: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type 
-ERRO[0046] failed to create node router1: Error response from daemon: OCI runtime create failed: container_linux.go:367: starting container process caused: process_linux.go:495: container init caused: rootfs_linux.go:60: mounting "/home/brian/containerlab/lab-examples/frrlab/daemons" to rootfs at "/var/lib/docker/overlay2/3a666729c8f0e104fdf73a635c4307eb6afd3da9a97278e312b32062e4623002/merged/etc/frr/daemons" caused: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type 
-INFO[0049] Creating virtual wire: PC2:eth1 <--> router2:eth3 
-INFO[0049] Creating virtual wire: PC3:eth1 <--> router3:eth3 
-INFO[0049] Creating virtual wire: router1:eth1 <--> router2:eth1 
-INFO[0049] Creating virtual wire: PC1:eth1 <--> router1:eth3 
-INFO[0049] Creating virtual wire: router1:eth2 <--> router3:eth1 
-INFO[0049] Creating virtual wire: router2:eth2 <--> router3:eth2 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to Statfs "": no such file or directory 
-ERRO[0049] failed to run postdeploy task for node router2: failed to Statfs "": no such file or directory 
-ERRO[0049] failed to run postdeploy task for node router3: failed to Statfs "": no such file or directory 
-ERRO[0049] failed to run postdeploy task for node router1: failed to Statfs "": no such file or directory 
-INFO[0049] Writing /etc/hosts file                    
-+---+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
-| # |        Name         | Container ID |              Image              | Kind  | Group |  State  |  IPv4 Address  |     IPv6 Address     |
-+---+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
-| 1 | clab-frrlab-PC1     | 52c817381fad | praqma/network-multitool:latest | linux |       | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 2 | clab-frrlab-PC2     | 19c6ec269692 | praqma/network-multitool:latest | linux |       | running | 172.20.20.6/24 | 2001:172:20:20::6/64 |
-| 3 | clab-frrlab-PC3     | 45afcee44d5c | praqma/network-multitool:latest | linux |       | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
-| 4 | clab-frrlab-router1 | d6883639ccba | frrouting/frr:latest            | linux |       | created | 172.20.20.7/24 | 2001:172:20:20::7/64 |
-| 5 | clab-frrlab-router2 | 466883dd3245 | frrouting/frr:latest            | linux |       | created | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-| 6 | clab-frrlab-router3 | bb913615b9ad | frrouting/frr:latest            | linux |       | created | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-+---+---------------------+--------------+---------------------------------+-------+-------+---------+----------------+----------------------+
-```
-
-
-Initial setup
-
-
-Log into each node and run config commands from teh config files saved in the project directory.
-
-
-
-Clean up the lab with the command:
-
-```
-clab destroy --topo frrlab.clab.yml
-```
-
-Fix: do not bind a file. Bind a directory. But a copy of the daemons file in a unique directory and bind it.
-Or, to configure the daemons using /etc/frr from a host volume, put the config files in, say, ./docker/etc and bind mount that into the container:
-
-******
-Fix
-use frr-debian, not frr
-maybe frr is just the software with no other filesystem or networking and frr-debian has everything you need. Propose fix to project.
-******
-TODO: update topology file
-
-
-
-
-https://containerlab.srlinux.dev
-
-
-
- 
-Try:
-
-```
-docker run -d -it \
-  --name frr1 \
-  --mount type=bind,source="$(pwd)"/router1-config/daemons,target=/etc/frr/daemons \
-  frrouting/frr
-```
-```
-ecbf60555b42666838f705deb1179c22d3b99505c218b467c601edee5c20dac3
-docker: Error response from daemon: OCI runtime create failed: container_linux.go:367: starting container process caused: process_linux.go:495: container init caused: rootfs_linux.go:60: mounting "/home/brian/containerlab/lab-examples/frrlab/router1-config/daemons" to rootfs at "/var/lib/docker/overlay2/0ef350bb9cd8ce8017f7d901af944e18e2596358c6a1dd0d7a44aaf600f78175/merged/etc/frr/daemons" caused: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type.
-```
-
-The tried:
-```
-docker run -d -it \
-  --name frr1 \
-  frrouting/frr
-```
-
-But it also failed:
-```
-docker logs frr1
-cannot run start: /etc/frr/daemons does not exist
-```
-
-
-Try volumes:
-```
-docker run -it \
-  --name frr3 \
-  -v `pwd`/router1-config:/etc/frr frrouting/frr:latest
-```
-
-OK. So this is a problem in the "latest" version but it works OK in the "stable" version v7.5.1. [I opened issue #8558 in FRR's GitHub repo](https://github.com/FRRouting/frr/issues/8558) so see what the developers say.
-
-docker run -d \
---name frr1 \
---mount type=bind,source="$(pwd)"/router1-config/daemons,target=/etc/frr/daemons \
-frrouting/frr
-
-
-
-docker run -it --rm -v `pwd`/docker/etc:/etc/frr frr:latest
-
-
-/usr/bin/containerlab
-
-
-
-
-
-
-
-cat <<EOF > /etc/network/interfaces
-auto lo
-iface lo inet loopback
-                    
-auto eth0
-                              
-iface eth1 inet static
-       address 192.168.11.2/24
-       gateway 192.168.11.1
-EOF
-
-
-
-# Old PC config section
-
-#### PC1:
-
-The PC1 network configuration file should be stored in a subfolder named *PC1*. Create the folder and then edit the *interfaces* file:
-
-```
-$ mkdir pc1
-$ vi pc1/interfaces
-```
-
-Paste the following text into the *pc1/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.11.2/24
-up route add -net 192.168.0.0/16 gw 192.168.11.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.11.1 dev eth1
-```
-
-Save the file.
-
-The interfaces file will work in a Docker container because the network service will not have access to it until after the container starts and then mounts the file into its filesystem. So, we need to run the `ifup -a`
-
-
-#### PC2:
-
-Do the same for PC2:
-
-```
-$ mkdir pc2
-$ vi pc2/interfaces
-```
-
-Paste the following text into the *pc2/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.12.2/24
-up route add -net 192.168.0.0/16 gw 192.168.12.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.12.1 dev eth1
-```
-
-#### PC3:
-
-Do the same for PC2:
-
-```
-$ mkdir pc3
-$ vi pc3/interfaces
-```
-
-Paste the following text into the *pc3/interfaces*
-
-```
-#/etc/network/interfaces
-auto eth1
-iface eth1 inet static
-   address 192.168.13.2/24
-up route add -net 192.168.0.0/16 gw 192.168.13.1 dev eth1
-up route add 1-net 10.10.10.0/24 gw 192.168.13.1 dev eth1
-```
-
-
-
-
-
-It enables this functionality by porting and modifying functions from the [vrnetlab](https://www.brianlinkletter.com/2019/03/vrnetlab-emulate-networks-using-kvm-and-docker/) network emulator.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-The management network *clab* is managed by docker and assigns IP address to each node's *eth0* interface. BUT the wires between nodes are not managed by docker so do not show up in the `docker network ls` command's output.
-
-```
-$ sudo docker network list
-NETWORK ID     NAME      DRIVER    SCOPE
-5d50bc8c730d   bridge    bridge    local
-57578c3a0fad   clab      bridge    local
-49df145231ea   host      host      local
-dba4309b2c9f   none      null      local
-```
-
-And you can see the node container running
-
-```
-$ sudo docker ps
-CONTAINER ID   IMAGE                             COMMAND                  CREATED          STATUS          PORTS                                  NAMES
-29c519c5ecfc   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC2
-a601e70eae76   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC1
-c5515cd75c09   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router2
-ded0dc21fa72   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router3
-1444d4914c9e   frrouting/frr:v7.5.1              "/sbin/tini -- /usr/…"   18 minutes ago   Up 18 minutes                                          clab-frrlab-router1
-58bae1a87939   praqma/network-multitool:latest   "/bin/sh /docker-ent…"   18 minutes ago   Up 18 minutes   80/tcp, 443/tcp, 1180/tcp, 11443/tcp   clab-frrlab-PC3
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-First, let's look at the "hardware" on Router1, which is the Linux kernel-based network infrastructure configured by Containerlab and Docker. Connect to Router1 linux shell:
-
-```
-$ docker exec -it clab-frrlab-router1 /bin/ash
-```
-
-Check out Router1's Linux kernel's view of the network:
-
-```
-/ # ip link
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
-78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
-81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
-/ #
-/ # ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-62: eth0@if63: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-    inet 172.20.20.2/24 brd 172.20.20.255 scope global eth0
-       valid_lft forever preferred_lft forever
-    inet6 2001:172:20:20::2/64 scope global nodad 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::42:acff:fe14:1402/64 scope link 
-       valid_lft forever preferred_lft forever
-75: eth2@if74: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 16:df:15:1d:e7:73 brd ff:ff:ff:ff:ff:ff link-netnsid 3
-    inet6 fe80::14df:15ff:fe1d:e773/64 scope link 
-       valid_lft forever preferred_lft forever
-78: eth3@if79: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 82:0b:77:83:46:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
-    inet6 fe80::800b:77ff:fe83:4642/64 scope link 
-       valid_lft forever preferred_lft forever
-81: eth1@if80: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP group default 
-    link/ether 7a:7b:21:3b:44:e8 brd ff:ff:ff:ff:ff:ff link-netnsid 2
-    inet6 fe80::787b:21ff:fe3b:44e8/64 scope link 
-       valid_lft forever preferred_lft forever
-/ #
-/ # ip route
-default via 172.20.20.1 dev eth0 
-172.20.20.0/24 dev eth0 proto kernel scope link src 172.20.20.2
-```
-
-We see four interfaces: *eth0* to *eth3*. Only *eth0* is configured with in an IPv4 address.
- 
-Exit the Router1 container's shell
-
-```
-/ # exit
-$
-```
-
