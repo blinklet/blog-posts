@@ -110,7 +110,7 @@ topology:
 
 The Containerlab topology file format is self-explanitary. The file starts with the name of the lab, followed by the lab topology. If you wish to run more than one lab at the same time, you must ensure each lab has a different name in the topology file. It defines each device and then it defines the links between devices. You also see it mounts a *daemons* configuration file to each router. We will create those files, next.
 
-### Add configuration files
+## Add configuration files
 
 The FRR network operating system must have a copy of the *daemons* file in its */etc/frr* directory or FRR will not start. As you saw above, Containerlab makes it easy specify which files to mount into each container. 
 
@@ -176,7 +176,7 @@ $ cp router1/daemons router2/daemons
 $ cp router1/daemons router3/daemons
 ```
 
-## Start the lab
+# Start the lab
 
 To start a Containerlab network emulation, run the `clab deploy` command with the new *frrlab* topology file. Containerlab will download the docker images used to create the PCs and routers, start containers based on the images and connect them together.
 
@@ -206,7 +206,7 @@ INFO[0032] Creating lab directory: /home/brian/Documents/frrlab/clab-frrlab
 INFO[0032] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500'
 INFO[0000] Creating container: router2                  
 INFO[0000] Creating container: router1                  
-INFO[0000] Creating container: router3                  
+INFO[0000] Creating container: Router3                 
 INFO[0000] Creating container: PC1                      
 INFO[0000] Creating container: PC2                      
 INFO[0000] Creating container: PC3                      
@@ -233,7 +233,7 @@ Containerlab outputs a table containing information about the running lab. You c
 
 In the table, you see each node has an IPv4 address on the management network. If your newtwork nodes run an SSH server, you would be able to connect to them via SSH. However, the containers I am using in this example are both [based on Alpine Linux and do not have *openssh-server* installed](https://unix.stackexchange.com/questions/602646/content-of-etc-network-in-alpine-linux-image) so we will connect to each node using Docker. If you want lab users to have a more realistic experience, you could build new containers based on the *frrouting* and *network-mulitool* containers that also include *openssh-server*. 
 
-## Configure network nodes
+# Configure network nodes
 
 Currently, the nodes are running but the network is not configured. To configure the network, log into each node and run its native configuration commands, either in the shell (the *ash* shell in Alpine Linux), or in its router CLI (*vtysh* in FRR).
 
@@ -252,7 +252,7 @@ Based on the network plan we creaed when we designed this network, configure PC1
 / # exit
 ```
 
-Configure PC2 in a similar way:
+Configure *PC2*  in a similar way:
 
 ```
 $ sudo docker exec -it clab-frrlab-PC2 /bin/ash
@@ -264,7 +264,7 @@ $ sudo docker exec -it clab-frrlab-PC2 /bin/ash
 / # exit
 ```
 
-Configure PC3:
+Configure *PC3* :
 
 ```
 $ sudo docker exec -it clab-frrlab-PC3 /bin/ash
@@ -278,7 +278,7 @@ $ sudo docker exec -it clab-frrlab-PC3 /bin/ash
 
 
 
-Configure Router1 by running *vtysh* in the Docker container *clab-frrlab-router1*.
+Configure *Router1* by running *vtysh* in the Docker container *clab-frrlab-router1*.
 
 ```
 $ sudo docker exec -it clab-frrlab-router1 vtysh
@@ -307,7 +307,7 @@ exit
 ```
 
 
-Configure Router2 in a similar way:
+Configure *Router2* in a similar way:
 
 ```
 $ sudo docker exec -it clab-frrlab-router2 vtysh
@@ -358,7 +358,7 @@ write
 exit
 ```
 
-### Some quick tests.
+## Some quick tests
 
 After configuring the interfaces on each node, you should be able to ping from *PC1* to any IP address configured on *Router1*, but not to interfaces on other nodes.
 
@@ -384,7 +384,7 @@ PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 / # exit
 ```
 
-### Add OSPF
+## Add OSPF
 
 So that we can reach all networks in this example, set up a dynamic routing protocol on the FRR routers. In this example, we will set up a simple OSPF area for all networks connected to the routers. 
 
@@ -455,7 +455,7 @@ write
 exit
 ```
 
-### OSPF testing
+## OSPF testing
 
 Now, *PC1* should be able to ping any interface on any network node. Run the ping command on *PC1* to try to reach *PC3* over the network.
 
@@ -483,7 +483,7 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 This shows that the OSPF protocol successfuly set up the routing tables on the Routers so that all nodes on this network can reach each other.
 
 
-### network defect introduction
+# Network defect introduction
 
 To further demonstrate that the network configuration is correct, see what happens if the link between *Router1* and *Router3* goes down. If everything works correctly, the OSPF protocol will detect that the link has failed and reroute any traffic going from *PC1* to *PC3* through *Router1* and *Router3* via *Router2*.
 
@@ -516,7 +516,7 @@ Restore the link on Router1:
 $ sudo docker exec clab-frrlab-router1 ip link set dev eth2 up
 ```
 
-And see that the traceroute between *PC1* and PC3 goes back to its original path.
+And see that the traceroute between *PC1* and *PC3*  goes back to its original path.
 
 ```
 $ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
@@ -526,7 +526,7 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  3  192.168.13.2 (192.168.13.2)  0.002 ms  0.005 ms  0.003 ms
 ```
 
-Links can also be managed by *ip* commands executed on the host system. Each node is in its own network namespace which is named the same as its container name. To bring down a link on Router1 we first list all the links in the namespace, *clab-frrlab-router1*
+Links can also be managed by *ip* commands executed on the host system. Each node is in its own network namespace which is named the same as its container name. To bring down a link on *Router1* we first list all the links in the namespace, *clab-frrlab-router1*
 
 ```
 $ sudo ip netns exec clab-frrlab-router1 ip link
@@ -549,7 +549,7 @@ We see device *eth2* is attached to the network namespace *clab-frrlab-router1*.
 $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
 ```
 
-We see the traceroute from *PC1* to PC3 again passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
+We see the traceroute from *PC1* to *PC3*  again passes through Router1, Router2, and *Router3* just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
 
 ```
 $ sudo docker exec clab-frrlab-PC1 traceroute 192.168.13.2
@@ -570,7 +570,7 @@ $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 up
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
 
-Then, see that the traceroute from *PC1* to PC3 goes back to the normal route, passing through Router1 and Router3.
+Then, see that the traceroute from *PC1* to *PC3*  goes back to the normal route, passing through *Router1* and Router3.
 
 
 ```
@@ -596,13 +596,13 @@ $ sudo clab destroy --topo frrlab.yml
 
 Containerlab will [import and save configuration files for some  kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind. However, Linux containers only have access to standard Docker tools like volume mounting, although Containerlab facilitates mounting volumes by allowing users to specifify bind mounts in the lab topology file.
 
-### Persistent configuration for FRR routers
+## Persistent configuration for FRR routers
 
 The routers in this example are based on FRR, which uses the configuration files */etc/frr/deamons* and *etc/frr/frr.conf*. 
 
 Create an *frr.conf* file for each router and save each file in its lab folder's router directory.
 
-#### Router1:
+### Router1:
 
 Create the configuration file for *Router1* and save it in *router1/frr.conf*.
 
@@ -635,9 +635,9 @@ line vty
 
 ```
 
-#### Router2:
+### Router2:
 
-Create the configuration file for Router2 and save it in *router2/frr.conf*.
+Create the configuration file for *Router2* and save it in *router2/frr.conf*.
 
 ```
 frr version 7.5.1_git
@@ -668,9 +668,9 @@ line vty
 !
 ```
 
-#### Router3:
+### Router3:
 
-Create the configuration file for Router3 and save it in *router3/frr.conf*.
+Create the configuration file for *Router3* and save it in *router3/frr.conf*.
 
 
 ```
@@ -701,7 +701,7 @@ line vty
 !
 ```
 
-### Modify the topology file
+## Modify the topology file
 
 Edit the *frrlab.yml* file and add the mounts for the *frr.conf* files for each router:
 
@@ -748,7 +748,7 @@ topology:
 ```
 
 
-### Persistent configuration for PC network interfaces
+## Persistent configuration for PC network interfaces
 
 To permanently configure network setting on an Alpine Linux system, one would normally save an *interfaces* configuration file on each PC in the */etc/network* directory, or save a startup script in one of the network hook directories such as */etc/network/if-up.d*.
 
@@ -838,7 +838,7 @@ For small networks, this is not very useful because it does not show the port na
 
 To [capture network traffic on one of the containerlab network connections](https://containerlab.srlinux.dev/manual/wireshark/), one must again access interfaces in the network namespaces for each container.
 
-For example, we know that traffic from *PC1* to *PC3* will, when all links are up, pass via the link between Router1 and Router3. Let's monitor the traffic on one of the interfaces that make up that connection. 
+For example, we know that traffic from *PC1* to *PC3* will, when all links are up, pass via the link between *Router1* and Router3. Let's monitor the traffic on one of the interfaces that make up that connection. 
 
 We know, from our topology file, that interface *eth2* on *Router1* is connected to *eth1* on *Router3*. So, let's look at the traffic on *Router3* *eth1*. 
 
@@ -864,6 +864,12 @@ To stop a Containerlab network, run the `clab destroy` command using the same to
 $ sudo clab destroy --topo frrlab.yml
 ```
 
+# Contributing to Containerlab
+
+If you create an interesting network emulation scenario, you may wish to [contribute it](https://gist.github.com/MarcDiethelm/7303312) to the lab examples in the Containerlab project.
+
+In my case, I opened pull request #xxx on GitHub and hope it will be accepted.
+
 # Conclusion
 
 Containerlab is a new network emulation tool that can create large, complex network emulation scenarios using a simple topology file. It leverages the strengths of Docker and Linux networking to build a lightweight infrastructure in which the emulated nodes run. The Containerlab developers include strong integrations for the SR Linux network operating system and also built in basic support for other commercial network operating systems. 
@@ -872,64 +878,17 @@ Containerlab would be most interesting to network engineers who need to automate
 
 Containerlab does not abstract away all the complexity, however. Users may still need to have intermediate-level knowledge of Linux networking commands and Docker to emulate network failures and to capture network traffic for analysis and verification. 
 
+# Appendix A: Debugging Docker networking isues
 
+The following may be a corner case but I thought it was worth documenting. 
 
+Containerlab does not have a command to stop individual nodes running in the lab. The only way to kill a node in a running lab is to use the *docker stop* command on that node's container.
 
-# Appendix A: Debugging Docker isues
+If one stops a container in the network emulation scenario and then starts it again, the links that connect that node to other nodes will disappear and will not be restored when the container is restarted. And, the network namespace used by the container gets corrupted.
 
-The following may be a corner case
+To demonstrate this issue, I stopped and then started a node *PC1* with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Stopping individual nodes create problems
-
-I stopped and then started a node *PC1* with `docker stop clab-frrlab-PC1` and `docker start clab-frrlab-PC1`. The link between *PC1* and Router1 disappeared. 
-
-
-I think stopping the container causes the attached veth to disconnect.
-
-
-Create link again with:
-
-```
-$ sudo containerlab tools veth create -a clab-frrlab-PC1:eth1 -b clab-frrlab-router1:eth3
-```
-
-Then, reconfigure the IP address on *PC1* (Router1 does not lose its configuration because it is was not stopped)
-
-```
-$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
-```
-```
-ip addr add 192.168.11.2/24 dev eth1
-exit
-```
-
-
-There's no clab command for stopping and starting individual nodes.
-
-How to pre-configure the PC network? Maybe bind a copy of */etc/network/interfaces* in the topology file?
-
-
-Experiment:
-
-Base state of *PC1* and Router1
+First, I review the existing state of *PC1*'s and *Router1*'s links:
 
 ```
 $ sudo ip netns exec clab-frrlab-PC1 ip link
@@ -953,76 +912,98 @@ $ sudo ip netns exec clab-frrlab-router1 ip link
     link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
 ```
 
-Stop *PC1* container
+Everything looks good.
+
+Then, I stopped the *PC1* container:
 
 ```
 $ sudo docker stop clab-frrlab-PC1
 ```
 
-Then check links
+I checked the links again. Since I stopped *clab-frrlab-PC1*, I will check the network namespace:
+
+First, check the available network namespaces:
+
+```
+$ sudo ip netns ls
+clab-frrlab-router1 (id: 5)
+clab-frrlab-PC1
+clab-frrlab-router2 (id: 3)
+clab-frrlab-PC3 (id: 2)
+clab-frrlab-router3 (id: 1)
+clab-frrlab-PC2 (id: 0)
+```
+
+It seems that the namespace *clab-frrlab-PC1* still exists. It should be deleted by Docker when the container stopped. I think that, because Containerlab creates network interfaces on the Docker container that are not managed by Docker, it fails to free up the network namespace completely.
+
+But, running commands in the network namespace does not work:
 
 ```
 $ sudo ip netns exec clab-frrlab-PC1 ip link
 Cannot open network namespace "clab-frrlab-PC1": No such file or directory
-$
-$ sudo ip netns exec clab-frrlab-router1 ip link
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
-114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
 ```
 
-I see eth3 is gone also on Router 1
+So, even though I can still list the namespace, I cannot check the links in the namespace named *clab-frrlab-PC1*.
 
-Restart *PC1* container
+I checked the links on *Router1*:
+
+```
+$ sudo docker exec clab-frrlab-router1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+37: eth0@if38: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:05 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+48: eth2@if47: <BROADCAST,MULTICAST> mtu 65000 qdisc noqueue state DOWN mode DEFAULT group default 
+    link/ether 56:8e:93:fe:9c:fe brd ff:ff:ff:ff:ff:ff link-netnsid 1
+50: eth1@if49: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 5e:35:b1:6f:bc:5a brd ff:ff:ff:ff:ff:ff link-netnsid 3
+```
+
+I see that *Router1*'s *eth3* interface disappeared. It looks like, when one container stops, both sides of the *veth* pair that make up the link get deleted.
+
+I expect I should be able to restore the original state of the network by restarting the *PC1* container:
 
 ```
 $ sudo docker start clab-frrlab-PC1
 ```
-Then check links
 
+Then, I check the links on *PC1*:
 
 ```
-$ sudo ip netns exec clab-frrlab-router1 ip link
+$ sudo docker exec clab-frrlab-PC1 ip link
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-91: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-106: eth2@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 16:36:c6:ca:4e:77 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router3
-114: eth1@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 42:ca:0d:5c:15:3c brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router2
-$
-$ sudo ip netns exec clab-frrlab-PC1 ip link
-Cannot open network namespace "clab-frrlab-PC1": No such file or directory
+55: eth0@if56: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:06 brd ff:ff:ff:ff:ff:ff link-netnsid 0
 ```
 
-Hmmm. No namespace for PC1...
+I saw that *eth1* was not restored. And, if I check *Router1*, I see that *eth3* is not restored on that end.
 
-Create link again with:
+So, I create link again with:
 
 ```
 $ sudo containerlab tools veth create -a clab-frrlab-PC1:eth1 -b clab-frrlab-router1:eth3
-INFO[0000] Creating virtual wire: clab-frrlab-PC1:eth1 <--> clab-frrlab-router1:eth3 
-INFO[0000] veth interface successfully created!         
-$
-$ sudo ip netns exec clab-frrlab-PC1 ip link
-Cannot open network namespace "clab-frrlab-PC1": No such file or directory
 ```
 
-Then, when I reconfigure  eth1 on *PC1* (remember the FRR config still existed on Router1 so I did not need to reconfigure that side), the connection works...
+It appears the link is successfully created:
+
+```
+INFO[0000] Creating virtual wire: clab-frrlab-PC1:eth1 <--> clab-frrlab-router1:eth3 
+INFO[0000] veth interface successfully created!
+```
+
+Then, when I reconfigure  *eth1* on *PC1*, the connection works again:
 
 ```
 $ sudo docker exec -it clab-frrlab-PC1 /bin/ash
-```
-```
 / # ip addr add 192.168.11.2/24 dev eth1
 / # ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
 / # ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+```
+
+I can reach *PC3* again from *PC1*:
+
+```
 / # ping 192.168.13.2
 PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 64 bytes from 192.168.13.2: icmp_seq=1 ttl=62 time=0.272 ms
@@ -1034,19 +1015,27 @@ rtt min/avg/max/mdev = 0.056/0.164/0.272/0.108 ms
 / # exit
 ```
 
-But container lab has lost track of the veth pair and *PC1* no longer has a namespace named clab-frrlab-PC1. Actually the host seems to have lost track of the network namespace clab-frrlab-PC1.
+But, I cannot access commands in the container's network namespace:
 
 ```
-$ sudo ip netns list
-clab-frrlab-PC2 (id: 5)
+$ sudo ip netns exec clab-frrlab-PC1 ip link
+Cannot open network namespace "clab-frrlab-PC1": No such file or directory
+```
+
+And, the namespace list still looks odd:
+
+```
+$ sudo ip netns ls
 clab-frrlab-PC1
-clab-frrlab-router1 (id: 3)
+clab-frrlab-router2 (id: 4)
+clab-frrlab-router3 (id: 3)
 clab-frrlab-PC3 (id: 2)
-clab-frrlab-router3 (id: 1)
-clab-frrlab-router2 (id: 0)
+clab-frrlab-PC2 (id: 1)
+clab-frrlab-router1 (id: 0)
 ```
 
-So, clab-frrlab-PC1 has no netnsid (it should be 4).
+
+The host seems to have lost track of the network namespace *clab-frrlab-PC1*. So, *clab-frrlab-PC1* has no netnsid. It should have an netnsid of 5.
 
 ```
 $ ip netns list-id
@@ -1058,65 +1047,72 @@ nsid 4
 nsid 5
 ```
 
-But nsid 4 still exists so somehow there's a disconnect.
+But nsid 5 still exists so somehow there's a disconnect. I checked the *netns* directory:
 
 
 ```
-ls -l /var/run/netns
+$ ls -l /var/run/netns
 total 0
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC1 -> /proc/27782/ns/net
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC2 -> /proc/27833/ns/net
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-PC3 -> /proc/27840/ns/net
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router1 -> /proc/27764/ns/net
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router2 -> /proc/27714/ns/net
-lrwxrwxrwx 1 root root 18 Apr 26 15:21 clab-frrlab-router3 -> /proc/27823/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-PC1 -> /proc/5050/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-PC2 -> /proc/4884/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-PC3 -> /proc/4915/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-router1 -> /proc/4801/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-router2 -> /proc/4954/ns/net
+lrwxrwxrwx 1 root root 17 May  4 18:25 clab-frrlab-router3 -> /proc/5012/ns/net
 ```
 
-What proc id is clab-frrlab-PC1 using?
+Everything looks OK, at first. But, what proc id does Docker think container *clab-frrlab-PC1* is using?
 
 ```
 $ sudo docker inspect --format '{{.State.Pid}}' clab-frrlab-PC1
-30854
+5851
 ```
 
-So...
+But, in the *netns* directory, the container is really using proc 5050. But, only proc 5851 exists in the */proc* directory
 
 ```
-$ sudo ln -sf /proc/30854/ns/net /var/run/netns/clab-frrlab-PC1
+$ ls /proc | grep 5851
+5851
+$
+$ ls /proc | greo 5050
+$
 ```
 
-Then...
+So, I needed to create a new symbolic link from *clab-frrlab-PC1* to proc 5851 to "reattach" the Docker container to its namespace.
+
+```
+$ sudo ln -sf /proc/5851/ns/net /var/run/netns/clab-frrlab-PC1
+```
+
+Then, when I list the namespaces, everythink looks OK:
 
 ```
 $ sudo ip netns list
-clab-frrlab-PC1 (id: 4)
-clab-frrlab-PC2 (id: 5)
-clab-frrlab-router1 (id: 3)
+clab-frrlab-PC1 (id: 5)
+clab-frrlab-router2 (id: 4)
+clab-frrlab-router3 (id: 3)
 clab-frrlab-PC3 (id: 2)
-clab-frrlab-router3 (id: 1)
-clab-frrlab-router2 (id: 0)
+clab-frrlab-PC2 (id: 1)
+clab-frrlab-router1 (id: 0)
 ```
+
+And, the *ip* commands work again in the *clab-frrlab-PC1* network namespace. For example:
+
 ```
-$ sudo ip netns exec clab-frrlab-PC1 ip link
-```
-```
-$ sudo ip netns exec clab-frrlab-PC1 ip link
+$ udo ip netns exec clab-frrlab-PC1 ip link
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-115: eth0@if116: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 02:42:ac:14:14:04 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-118: eth1@if117: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
-    link/ether 2e:32:4d:24:0a:9d brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router1
+31: eth0@if32: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 02:42:ac:14:14:06 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+34: eth1@if33: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 65000 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 56:75:73:33:b3:e7 brd ff:ff:ff:ff:ff:ff link-netns clab-frrlab-router1
 ```
 
-Back in business!!!
-
-
-Then destroy the topology
+Then, I destroyed the topology:
 
 ```
-$ sudo clab destroy --topo frrlab.clab.yml
-INFO[0000] Parsing & checking topology file: frrlab.clab.yml 
+$ sudo clab destroy --topo frrlab.yml
+INFO[0000] Parsing & checking topology file: frrlab.yml 
 INFO[0000] Destroying container lab: frrlab             
 INFO[0000] Removed container: clab-frrlab-PC2           
 INFO[0011] Removed container: clab-frrlab-PC1           
@@ -1128,11 +1124,13 @@ INFO[0012] Removing container entries from /etc/hosts file
 INFO[0012] Deleting docker network 'clab'...     
 ```
 
-Seems to clean up everything OK
+And everything seemed to clean up corectly:
 
-
+```
 $ sudo ip netns list
-
 $ sudo ip netns list-id
 $ sudo ls -l /var/run/netns
 total 0
+```
+
+This seems like a minor issue. Users would not notice it unless they were using *ip* comands on the host system to manage interfaces running on the network nodes. But, I wanted to document it because I speny a few hours figuring out what was happening.
