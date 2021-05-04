@@ -10,9 +10,9 @@ Containerlab is intended to be a vendor-neutral network emulator that quickly bu
 
 !<--more-->
 
-The Containerlab project provides [excellent documentation](https://containerlab.srlinux.dev/) so I don't need to write a tutorial. But, Containerlab does not yet document all the steps required to build an open-source router lab that starts in a pre-defined state. This post will cover that scenario.
+The Containerlab project provides [excellent documentation](https://containerlab.srlinux.dev/) so I don't need to write a tutorial. But, Containerlab does not yet document all the steps required to build an open-source router lab that starts in a pre-defined state. This post will cover that scenario so I hope it adds something of value.
 
-While working through this example, you will learn about most of Containerlab's container-based features. I'll write about running VM-based labs in a future post.
+While working through this example, you will learn about most of Containerlab's container-based features. I'll write about building and running VM-based labs in a future post.
 
 # Install Containerlab
 
@@ -578,7 +578,7 @@ $ sudo docker exec -dit clab-frrlab-PC1 /traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.008 ms  0.006 ms  0.003 ms
  2  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.005 ms
- 3  192.168.13.2 (192.168.13.2)  0.005 ms  0.006 ms  0.005 ms
+ 3  192.168.13.2 (192.168.1377.2)  0.005 ms  0.006 ms  0.005 ms
 ```
 
 So, we see we can impact network behavior using *ip* commands on the host system. 
@@ -587,12 +587,7 @@ So, we see we can impact network behavior using *ip* commands on the host system
 
 ## Persistent configuration
 
-
-Containerlab does not save the configuration files for Linux containers. However, it will [save configuration files for some other kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind.
-
-Users who build labs from Linux containers must reconfigure the lab every time it is restarted or must bind configuration files that have hard-coded configurations to each container.
-
-In this section, I will show you how to integrate configuration files into the lab directory and topology file so you can start a lab in a defined initial state.
+Containerlab will [import and save configuration files for some  kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind. However, Linux containers only have access to standard Docker tools like volume mounting, although Containerlab facilitates mounting volumes by allowing users to specifify bind mounts in the lab topology file.
 
 ### Persistent configuration for FRR routers
 
@@ -602,7 +597,7 @@ Create an *frr.conf* file for each router and save each file in its lab folder's
 
 #### Router1:
 
-Create the configuration file for Router1 and save it in *router1/frr.conf*.
+Create the configuration file for *Router1* and save it in *router1/frr.conf*.
 
 ```
 frr version 7.5.1_git
@@ -749,35 +744,36 @@ topology:
 
 ### Persistent configuration for PC network interfaces
 
-Normally, one would save a network configuration file on each PC in the */etc/network* directory, or would save a startup script in one of the network hook directories such as */etc/network/if-up.d*.
+To permanently configure network setting on an Alpine Linux system, one would normally save an *interfaces* configuration file on each PC in the */etc/network* directory, or save a startup script in one of the network hook directories such as */etc/network/if-up.d*.
 
-However, the container does not have permissions manage its own networking with initialization scripts. The user must connect to the container's shell and run *ip* commands or must configure the container's network namespace. I think it is easier to work with each contoaner's network namespace.
+However, Docker containers do not have permission manage their own networking with initialization scripts. The user must connect to the container's shell and run *ip* commands or must configure the container's network namespace. I think it is easier to work with each container using Docker commands.
 
-To create a consistent initial network state for each PC container, create a script that runs on the host that will configure the PCs' *eth1* interface and set up some static routes. This is a hack, and is hard-coded so it works for this lab.
+To create a consistent initial network state for each PC container, create a script that runs on the host that will configure the PCs' *eth1* interface and set up some static routes. 
 
 Create a file named *PC-interfaces* and save it in the lab directory. Make it executable. The file contents are shown below:
 
+
 ```
 #!/bin/sh
-sudo ip netns exec clab-frrlab-PC1 ip link set eth1 up
-sudo ip netns exec clab-frrlab-PC1 ip addr add 192.168.11.2/24 dev eth1
-sudo ip netns exec clab-frrlab-PC1 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
-sudo ip netns exec clab-frrlab-PC1 ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+sudo docker exec -d clab-frrlab-PC1 ip link set eth1 up
+sudo docker exec -d clab-frrlab-PC1 ip addr add 192.168.11.2/24 dev eth1
+sudo docker exec -d clab-frrlab-PC1 ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+sudo docker exec -d clab-frrlab-PC1 ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
 
-sudo ip netns exec clab-frrlab-PC2 ip link set eth1 up
-sudo ip netns exec clab-frrlab-PC2 ip addr add 192.168.12.2/24 dev eth1
-sudo ip netns exec clab-frrlab-PC2 ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
-sudo ip netns exec clab-frrlab-PC2 ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
+sudo docker exec -d clab-frrlab-PC2 ip link set eth1 up
+sudo docker exec clab-frrlab-PC2 ip addr add 192.168.12.2/24 dev eth1
+sudo docker exec clab-frrlab-PC2 ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
+sudo docker exec clab-frrlab-PC2 ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
 
-sudo ip netns exec clab-frrlab-PC3 ip link set eth1 up
-sudo ip netns exec clab-frrlab-PC3 ip addr add 192.168.13.2/24 dev eth1
-sudo ip netns exec clab-frrlab-PC3 ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
-sudo ip netns exec clab-frrlab-PC3 ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
+sudo docker exec clab-frrlab-PC3 ip link set eth1 up
+sudo docker exec clab-frrlab-PC3 ip addr add 192.168.13.2/24 dev eth1
+sudo docker exec clab-frrlab-PC3 ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
+sudo docker exec clab-frrlab-PC3 ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
 ```
 
 After you start this lab using the Containerlab topology file, run the *PC-interfaces.sh* script to configure the PCs. The routers will get their initial configuration from each one's mounted *frr.conf* file.
 
-Or, create a small script that starts everything. For example, I created an executable script named *lab.sh* and saved it in the lab directory. The script is shown below:
+Create a small script that starts everything. For example, I created an executable script named *lab.sh* and saved it in the lab directory. The script is shown below:
 
 ```
 #!/bin/sh
@@ -791,21 +787,8 @@ Now, when I want to start the FRR lab in a known state, I run the command:
 $ sudo ./lab.sh
 ```
 
-Preparing open-source router labs that have initial configurations is possible with the workarounds I demonstrated, above.
 
-
-
-
-
-
-
-
-
-
-
-
-
-### Get lab info
+# Get lab info
 
 You can get some information about the lab using the *inspect* and *graph* functions.
 
@@ -830,25 +813,15 @@ The graph function, however, does not appear to work
 Run:
 
 ```
-$ sudo containerlab graph
+$ sudo containerlab graph --topo frrlab.yml
 ```
 
 
-Then point browser to URL: `https://localhost:50080`
+Then point browser to URL: `https://localhost:50080`. You will see a web page with a network diagram and a table with management information.
 
-No image. Did not detect running lab and render it.
+![](./Images/clab-graph-002.png)
 
-
-```
-$ sudo clab graph --offline --topo frrlab.clab.yml
-```
-
-Gives picture below:
-
-![](./Images/clab-graph-001.png)
-
-But, because it is not based on a running lab, it does not show the IP addresses
-
+For small networks, this is not very useful because it does not show the port names on each node. I think it would be more useful in large network emulation scenarios with dozens of nodes.
 
 
 
@@ -860,13 +833,13 @@ For example, we know that traffic from PC1 to PC3 will, when all links are up, p
 
 We know, from our topology file, that interface *eth2* on *Router1* is connected to *eth1* on *Router3*. So, let's look at the traffic on *Router3* *eth1*. 
 
-Router3's network namespace has the same name as the container that run Router3: *clab-frrlab-router3*. So, follow the directions from the Containerlab documentation and run the following command to execute tcpdump and forward the tcpdump output to Wireshark: 
+Router3's network namespace has the same name as the container that run Router3: *clab-frrlab-router3*. Follow the directions from the [Containerlab documentation](https://containerlab.srlinux.dev/manual/wireshark/) and run the following command to execute tcpdump and forward the tcpdump output to Wireshark: 
 
 ```
 $ sudo ip netns exec clab-frrlab-router3 tcpdump -U -n -i eth1 -w - | wireshark -k -i -
 ```
 
-In the above command, tcpdump will send an unbuffered stream (the *-U* option) of packets read on interface *eth1* (the *-i eth1* option) without converting addresses to names (the *-n* option) to standard output (the *-w -* option), which is piped to Wireshark which reads from standard input (the *-i -* option) and starts reading packets immediately (the *-k* option).
+In the above command, *tcpdump* will send an unbuffered stream (the *-U* option) of packets read on interface *eth1* (the *-i eth1* option) without converting addresses to names (the *-n* option) to standard output (the *-w -* option), which is piped to Wireshark which reads from standard input (the *-i -* option) and starts reading packets immediately (the *-k* option).
 
 You should see a Wireshark window open on your desktop, displaying packets captured from Router3's *eth1* interface.
 
@@ -874,9 +847,21 @@ You should see a Wireshark window open on your desktop, displaying packets captu
 
 Stop the capture and Wireshark with the *Ctrl-C* key combination in the terminal window.
 
+# Stopping a network emulation
 
+To stop a Containerlab network, run the `clab destroy` command using the same topology file you used to deploy the network:
 
+```
+$ sudo clab destroy --topo frrlab.yml
+```
 
+# Conclusion
+
+Containerlab is a new network emulation tool that can create large, complex network emulation scenarios using a simple topology file. It leverages the strengths of Docker and Linux networking to build a lightweight infrastructure in which the emulated nodes run. The Containerlab developers include strong integrations for the SR Linux network operating system and also built in basic support for other commercial network operating systems. 
+
+Containerlab would be most interesting to network engineers who need to automate the setup of test networks as part of a development pipeline for network changes. The topology file for the test network can be included with the network configurations that need to be tested.
+
+Containerlab does not abstract away all the complexity, however. Users may still need to have intermediate-level knowledge of Linux networking commands and Docker to emulate network failures and to capture network traffic for analysis and verification. 
 
 
 
