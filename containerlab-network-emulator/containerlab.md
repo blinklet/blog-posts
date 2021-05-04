@@ -240,16 +240,16 @@ Currently, the nodes are running but the network is not configured. To configure
 To configure PC1, run Docker to execute a new shell on the container, *clab-frrlab-PC1*.
 
 ```
-$ docker exec -it clab-frrlab-PC1 /bin/ash
+$ sudo docker exec -it clab-frrlab-PC1 /bin/ash
 ```
 
 Based on the network plan we creaed when we designed this network, configure PC1's eth1 interface with an IP address and static routes to the external data networks.
 
 ```
-ip addr add 192.168.11.2/24 dev eth1
-ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
-ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
-exit
+/ # ip addr add 192.168.11.2/24 dev eth1
+/ # ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+/ # ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
+/ # exit
 ```
 
 Configure PC2 in a similar way:
@@ -258,10 +258,10 @@ Configure PC2 in a similar way:
 $ sudo docker exec -it clab-frrlab-PC2 /bin/ash
 ```
 ```
-ip addr add 192.168.12.2/24 dev eth1
-ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
-ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
-exit
+/ # ip addr add 192.168.12.2/24 dev eth1
+/ # ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
+/ # ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
+/ # exit
 ```
 
 Configure PC3:
@@ -270,10 +270,10 @@ Configure PC3:
 $ sudo docker exec -it clab-frrlab-PC3 /bin/ash
 ```
 ```
-ip addr add 192.168.13.2/24 dev eth1
-ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
-ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
-exit
+/ # ip addr add 192.168.13.2/24 dev eth1
+/ # ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
+/ # ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
+/ # exit
 ```
 
 
@@ -461,7 +461,7 @@ Now, *PC1* should be able to ping any interface on any network node. Run the pin
 
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 ping -c1 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 ping -c1 192.168.13.2
 PING 192.168.13.2 (192.168.13.2) 56(84) bytes of data.
 64 bytes from 192.168.13.2: icmp_seq=1 ttl=62 time=0.127 ms
 
@@ -473,7 +473,7 @@ rtt min/avg/max/mdev = 0.127/0.127/0.127/0.000 ms
 A traceroute shows that the packets pass from *PC1* to *Router1*, then to *Router3*, then to *PC3*:
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.004 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.005 ms  0.005 ms
@@ -500,7 +500,7 @@ $ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 down
 Then, run the traceroute command on *PC1* and see how the path to *PC3* changes:
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.005 ms  0.004 ms  0.004 ms
  2  192.168.1.2 (192.168.1.2)  0.005 ms  0.004 ms  0.002 ms
@@ -516,10 +516,10 @@ Restore the link on Router1:
 $ sudo docker exec -d clab-frrlab-router1 ip link set dev eth2 up
 ```
 
-And see that the traceroute between PC1 and PC3 goes back to its orogonal path.
+And see that the traceroute between PC1 and PC3 goes back to its original path.
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.004 ms  0.005 ms  0.003 ms
  2  192.168.2.2 (192.168.2.2)  0.004 ms  0.004 ms  0.002 ms
@@ -552,7 +552,7 @@ $ sudo ip netns exec clab-frrlab-router1 ip link set dev eth2 down
 We see the traceroute from PC1 to PC3 again passes through Router1, Router2, and Router3 just like it did when we disabled Router2's *eth2* link from inside the conbtainer.
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 traceroute 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.007 ms  0.006 ms  0.005 ms
  2  192.168.1.2 (192.168.1.2)  0.006 ms  0.009 ms  0.006 ms
@@ -574,7 +574,7 @@ Then, see that the traceroute from PC1 to PC3 goes back to the normal route, pas
 
 
 ```
-$ sudo docker exec -dit clab-frrlab-PC1 /traceroute 192.168.13.2
+$ sudo docker exec -it clab-frrlab-PC1 /traceroute 192.168.13.2
 traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
  1  192.168.11.1 (192.168.11.1)  0.008 ms  0.006 ms  0.003 ms
  2  192.168.3.2 (192.168.3.2)  0.005 ms  0.008 ms  0.005 ms
@@ -583,9 +583,16 @@ traceroute to 192.168.13.2 (192.168.13.2), 30 hops max, 46 byte packets
 
 So, we see we can impact network behavior using *ip* commands on the host system. 
 
+# Stop the network emulation
+
+To stop a Containerlab network, run the `clab destroy` command using the same topology file you used to deploy the network:
+
+```
+$ sudo clab destroy --topo frrlab.yml
+```
 
 
-## Persistent configuration
+# Persistent configuration
 
 Containerlab will [import and save configuration files for some  kinds of nodes](https://containerlab.srlinux.dev/manual/conf-artifacts/), such as the [Nokia SR linux](https://containerlab.srlinux.dev/manual/kinds/srl/) kind. However, Linux containers only have access to standard Docker tools like volume mounting, although Containerlab facilitates mounting volumes by allowing users to specifify bind mounts in the lab topology file.
 
@@ -866,34 +873,9 @@ Containerlab does not abstract away all the complexity, however. Users may still
 
 
 
+# Appendix A: Debugging Docker isues
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+The following may be a corner case
 
 
 
