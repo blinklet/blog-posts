@@ -46,6 +46,7 @@ https://tryolabs.com/blog/2020/12/21/top-10-python-libraries-of-2020/
 
 * [Typer](https://github.com/tiangolo/typer) : FastAPI for CLI applications 
 * [Rich](https://github.com/willmcgugan/rich) : rich text and beautiful formatting in the terminal. 
+* Textual
 
 
 ## DiskCache
