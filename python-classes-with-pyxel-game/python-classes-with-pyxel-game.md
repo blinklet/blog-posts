@@ -1,34 +1,34 @@
 % Learning to use Python classes
 
-I wrote this tutorial for people who are learning Python and are now ready to explore new concepts like object-oriented programming and Python classes. I assume the reader has already learned the [basics of Python programming](https://www.brianlinkletter.com/2020/09/python-the-minimum-you-need-to-know/).
+I wrote this tutorial for people who are learning Python and are now ready to explore object-oriented programming and Python classes. I assume the reader has already learned the [basics of Python programming](https://www.brianlinkletter.com/2020/09/python-the-minimum-you-need-to-know/).
 
-I think that most people learn best when working on a practical project. This tutorial will show readers how to build a simple game that they can share with their friends and family. While building the game, I demonstrate the types of problems solved by using classes and use Python classes to build and manage multiple game elements.
+I think that most people learn best when working on a practical project, so this tutorial will show readers how to build a simple game that they can share with their friends and family. While building the game, I demonstrate the types of problems solved by using classes and use Python classes to build and manage multiple game elements.
 
 <!--more-->
 
-> NOTE: I realize this is off-topic for my blog. I used the Pyxel game framework as an tool to introduce Python programming to my child. After using Pyxel to build a game, I thought that it provided  good example of using Python classes in an easy-to-understand way.
+> NOTE: I realize this is off-topic for my blog. I used the Pyxel game framework as an tool to introduce Python programming to my child. After using Pyxel to build a game, I thought that it provided a good example of using Python classes in an easy-to-understand way.
 
 # Python Classes
 
-A [Python class](https://docs.python.org/3/tutorial/classes.html) is a new type of Python object used in [object-oriented programming](https://www.freecodecamp.org/news/object-oriented-programming-in-python/). Programmers create instances of classes, by [instantiating](https://realpython.com/python-class-constructor/) a class, and then use or modify those instances' attributes in their programs. 
+A [Python class](https://docs.python.org/3/tutorial/classes.html) is a type of Python object used in [object-oriented programming](https://www.freecodecamp.org/news/object-oriented-programming-in-python/). Programmers create instances of classes, by [instantiating](https://realpython.com/python-class-constructor/) a class, and then use or modify those instances' attributes in their programs. 
 
-Each instance of a class is a unique object that may contain data, called attributes, and functions, called methods. 
+Each instance of a class is a unique object that may contain data, called data attributes, and functions, called methods. 
 
-Each class also contains an initialization function, called a constructor, that runs when a new instance is created. The constructor defines the initial state of the instance, based on code defined in it and any data that may be passed into the instance, when it is created.
+Each class also contains an initialization function, called a constructor, that runs when a new instance is created. It defines the initial state of the instance, based on code defined in the constructor function and any data that may be passed into the instance, when it is created.
 
-To demonstrate the simple use of Python classes, you will build a game using Python and the Pyxel framework. You will use Python classes and learn [fundamental object-oriented programming concepts](https://realpython.com/python3-object-oriented-programming/) such as inheritance[^1]. 
+To demonstrate the simple use of Python classes, this tutorial will show you how to build a game using Python and the Pyxel framework. You will use Python classes and learn [fundamental object-oriented programming concepts](https://realpython.com/python3-object-oriented-programming/) such as inheritance[^1]. 
 
 [^1]: I ignore more complex object-oriented concepts such as [composition and interfaces](https://realpython.com/inheritance-composition-python/). Object inheritance is suitable for simple-to-intermediate complexity programs and is relatively easy to understand, compared to other object-oriented programming topics. It is also the correct way to manage objects in the game creates in this tutorial because each subclass created has an "is a" relationship to its parent class.
 
 # The Pyxel Framework
 
-[Pyxel](https://github.com/kitao/pyxel#) is a retro game engine for Python. In a short time, you can learn enough about Pyxel to build a simple game.
+[Pyxel](https://github.com/kitao/pyxel#) is a retro game engine for Python. I chose Pyxel for this tutorial because it takes only a few minutes to learn enough about Pyxel to build a simple game or animation.
 
-Pyxel enables programmers to develop pixel-based games similar to video games from the 1980s and 1990s. Pyxel provides a set of functions that do most of the work of managing the game loop, displaying graphics, and playing sounds. Pyxel also offers the Pyxel Editor: an all-in-one solution for creating sprites, tiles, tile maps, sounds, and music for Pyxel games.
+Pyxel enables programmers to develop pixel-based games similar to video games from the 1980s and early 1990s. Pyxel provides a set of functions that do most of the work of managing the game loop, displaying graphics, and playing sounds. Pyxel also offers the Pyxel Editor: an all-in-one solution for creating sprites, tiles, tile maps, sounds, and music for Pyxel games.
 
-The [Pyxel web page](https://github.com/kitao/pyxel#) contains everything you need to know about using Pyxel and the Pyxel Editor. The Pyxel documentation is compact and clear.
+The [Pyxel web page](https://github.com/kitao/pyxel#) contains everything you need to know about using Pyxel and the Pyxel Editor. It will take about ten minutes to read the documentation.
 
-> Please stop here and read the [Pyxel documentation](https://github.com/kitao/pyxel#). Then, continue with this tutorial. It will take about ten minutes to read the documentation.
+> Please stop here and read the [Pyxel documentation](https://github.com/kitao/pyxel#). Then, continue with this tutorial. 
 
 If you would like to spend more time learning about Pyxel, you may look at the [resources listed at the end of this post](#more-information-about-pyxel).
 
@@ -36,7 +36,7 @@ If you would like to spend more time learning about Pyxel, you may look at the [
 
 To work with Pyxel and follow the examples in this post, first create a [Python virtual environment](https://docs.python.org/3/tutorial/venv.html) and install Pyxel in that environment. Then, install the Pyxel example files so you can re-use some of the assets from the examples in this tutorial. Execute the following commands [^2]:
 
-[^2]: I use a PC running Linux in all the examples. If you are using a Mac or a PC, you will use [slightly different commands](https://docs.python.org/3/tutorial/venv.html#creating-virtual-environments) to launch Python or to activate a Python virtual environment
+[^2]: I use a PC running Linux in all the examples. If you are using a Mac or a PC, you will use [slightly different commands](https://docs.python.org/3/tutorial/venv.html#creating-virtual-environments) to launch Python or to activate a Python virtual environment on your computer.
 
 ```bash
 $ mkdir learn_pyxel
@@ -88,9 +88,11 @@ You should see a new window appear on your desktop that looks like the image bel
 
 ![](./Images/pyxel_editor_1.png)
 
-This is the [Pyxel Editor](https://github.com/kitao/pyxel#how-to-create-resources). You may use it to view and create sprites, tiles, tile maps, sounds, and music for Pyxel games. 
+This is the [Pyxel Editor](https://github.com/kitao/pyxel#how-to-create-resources). It is displaying the contents of the *platformer.pyxres* file. You may use it to view and create sprites, tiles, tile maps, sounds, and music for Pyxel games. 
 
-In these tutorials, we focus on Python programming and using Python classes so we will not cover how to create new assets in the Pyxel resource editor. In this tutorial, you will use the Pyxel Editor to find existing game assets in existing resource files. See the [2-hour video walking through the basics of Pyxel](https://youtu.be/Qg16VhEo2Qs), as previously referenced, if you want a good introduction to creating new assets in the Pyxel Editor. 
+This tutorial focuses mostly on Python programming and using Python classes. It will not cover how to use the Pyxel Editor to create new game assets. In this tutorial, you will use the Pyxel Editor to find existing game assets in the existing *platformer.pyxres* resource file. [^2]
+
+[^2]: If you want a good introduction to creating new game assets in the Pyxel Editor, see the [2-hour video walking through the basics of Pyxel](https://youtu.be/Qg16VhEo2Qs), as referenced in the [resources listed at the end of this post](#more-information-about-pyxel), . 
 
 Quit the editor by pressing the *Escape* key.
 
@@ -98,7 +100,9 @@ Quit the editor by pressing the *Escape* key.
 
 Create a small Pyxel program that displays an animation of a bird flapping its wings. In this example, write the program in the procedural style so we can contrast this version to a program written in the object-oriented style, later.
 
-Re-use the bird sprites in the resource file *platformer.pyxres* from the [Pyxel examples](https://github.com/kitao/pyxel#try-pyxel-examples) you downloaded. The three bird sprites are on *Image 0* and are in (x, y) positions (0, 16), (8, 16), and (16, 16). Each sprite is eight pixels high, eight pixels wide, and shows the bird in a different animated position.
+## The bird sprite
+
+Re-use the bird sprites in the resource file *platformer.pyxres*. The three bird sprites are on *Image 0* and are in (x, y) positions (0, 16), (8, 16), and (16, 16). Each sprite is eight pixels high, eight pixels wide, and shows the bird in a different animated position.
 
 ## Pyxel window
 
