@@ -1,22 +1,25 @@
 % Learning to use Python classes
 
-I wrote this tutorial for people who are learning Python and are now ready to explore object-oriented programming and Python classes. I assume the reader has already learned the [basics of Python programming](https://www.brianlinkletter.com/2020/09/python-the-minimum-you-need-to-know/).
 
-I think that most people learn best when working on a practical project, so this tutorial will show readers how to build a simple game that they can share with their friends and family. While building the game, I demonstrate the types of problems solved by using classes and use Python classes to build and manage multiple game elements.
+This tutorial will demonstrate object-oriented programming and Python classes. 
+
+I think that most people learn best when working on a practical project, so I will show readers how to build a simple game that they can share with their friends and family. While building the game, I demonstrate the types of problems solved by using Python classes and I use Python classes to build and manage multiple game elements.
 
 <!--more-->
 
 > NOTE: I realize this is off-topic for my blog. I used the Pyxel game framework as an tool to introduce Python programming to my child. After using Pyxel to build a game, I thought that it provided a good example of using Python classes in an easy-to-understand way.
 
+I assume the reader has already learned the [basics of Python programming](https://www.brianlinkletter.com/2020/09/python-the-minimum-you-need-to-know/).
+
 # Python Classes
 
-A [Python class](https://docs.python.org/3/tutorial/classes.html) is a type of Python object used in [object-oriented programming](https://www.freecodecamp.org/news/object-oriented-programming-in-python/). Programmers create instances of classes, by [instantiating](https://realpython.com/python-class-constructor/) a class, and then use or modify those instances' attributes in their programs. 
+A [Python class](https://docs.python.org/3/tutorial/classes.html) is a type of Python object used in [object-oriented programming](https://www.freecodecamp.org/news/object-oriented-programming-in-python/). Programmers create new objects by [instantiating](https://realpython.com/python-class-constructor/), or calling, classes. They may then use or modify those instances' attributes in their programs. 
 
-Each instance of a class is a unique object that may contain data, called data attributes, and functions, called methods. 
+Each instance of a class is a unique object that may contain variables, called data attributes, and functions, called methods. 
 
 Each class also contains an initialization function, called a constructor, that runs when a new instance is created. It defines the initial state of the instance, based on code defined in the constructor function and any data that may be passed into the instance, when it is created.
 
-To demonstrate the simple use of Python classes, this tutorial will show you how to build a game using Python and the Pyxel framework. You will use Python classes and learn [fundamental object-oriented programming concepts](https://realpython.com/python3-object-oriented-programming/) such as inheritance[^1]. 
+To demonstrate using Python classes, this tutorial will show you how to build a game using Python and the Pyxel framework. You will use Python classes and learn [fundamental object-oriented programming concepts](https://realpython.com/python3-object-oriented-programming/) such as inheritance[^1]. 
 
 [^1]: I ignore more complex object-oriented concepts such as [composition and interfaces](https://realpython.com/inheritance-composition-python/). Object inheritance is suitable for simple-to-intermediate complexity programs and is relatively easy to understand, compared to other object-oriented programming topics. It is also the correct way to manage objects in the game creates in this tutorial because each subclass created has an "is a" relationship to its parent class.
 
@@ -24,7 +27,7 @@ To demonstrate the simple use of Python classes, this tutorial will show you how
 
 [Pyxel](https://github.com/kitao/pyxel#) is a retro game engine for Python. I chose Pyxel for this tutorial because it takes only a few minutes to learn enough about Pyxel to build a simple game or animation.
 
-Pyxel enables programmers to develop pixel-based games similar to video games from the 1980s and early 1990s. Pyxel provides a set of functions that do most of the work of managing the game loop, displaying graphics, and playing sounds. Pyxel also offers the Pyxel Editor: an all-in-one solution for creating sprites, tiles, tile maps, sounds, and music for Pyxel games.
+Pyxel enables programmers to develop pixel-based games similar to video games from the 1980s and early 1990s. Pyxel provides a set of functions that do most of the work of managing the game loop, displaying graphics, and playing sounds. Pyxel also offers the [Pyxel Editor](https://github.com/kitao/pyxel#how-to-create-resources): an all-in-one solution for creating sprites, tiles, tile maps, sounds, and music for Pyxel games.
 
 The [Pyxel web page](https://github.com/kitao/pyxel#) contains everything you need to know about using Pyxel and the Pyxel Editor. It will take about ten minutes to read the documentation.
 
@@ -44,7 +47,12 @@ $ cd learn_pyxel
 $ python3 -m venv env
 $ source ./env/bin/activate
 $ pip install pyxel
-$ pyxel copy examples 
+```
+
+Copy the Pyxel example files to the project folder:
+
+```bash
+$ pyxel copy_examples 
 ```
 
 List the contents of the *learn_pyxel* directory:
@@ -54,7 +62,9 @@ $ ls
 env  pyxel_examples
 ```
 
-The game resources you will use in this tutorial are stored in the *pyxel_examples/assets* directory:
+## Pyxel resource files
+
+Some example game resource files, which contain game assets such as sprites, tiles, tile maps, sounds, and music, are stored in the *pyxel_examples/assets* directory. Pyxel resource files have the file extension, *.pyxres*.
 
 ```bash
 $ ls -1 pyxel_examples/assets
@@ -78,7 +88,9 @@ $ cp pyxel_examples/assets/platformer.pyxres first_game
 $ cd first_game
 ```
 
-You can view the resource file in the Pyxel resource editor using the following Pyxel command:
+## The Pyxel Editor
+
+You can view the resource file in the [Pyxel Editor](https://github.com/kitao/pyxel#how-to-create-resources) using the following Pyxel command:
 
 ```bash
 $ pyxel edit platformer.pyxres
@@ -86,7 +98,7 @@ $ pyxel edit platformer.pyxres
 
 You should see a new window appear on your desktop that looks like the image below:
 
-![](./Images/pyxel_editor_1.png)
+![The Pyxel Editor](./Images/pyxel_editor_1.png)
 
 This is the [Pyxel Editor](https://github.com/kitao/pyxel#how-to-create-resources). It is displaying the contents of the *platformer.pyxres* file. You may use it to view and create sprites, tiles, tile maps, sounds, and music for Pyxel games. 
 
@@ -98,7 +110,9 @@ Quit the editor by pressing the *Escape* key.
 
 # First Pyxel program
 
-Create a small Pyxel program that displays an animation of a bird flapping its wings. In this example, write the program in the procedural style so we can contrast this version to a program written in the object-oriented style, later.
+First, write the program in the procedural style so you can contrast this version to a program written in the object-oriented style, later.
+
+Create a small, procedural Pyxel program that displays an animation of a bird flapping its wings. 
 
 ## The bird sprite
 
@@ -111,7 +125,7 @@ First, import the *pyxel* module, initialize the screen size and frame rate (per
 ```python
 import pyxel
 
-pyxel.init(64, 32, fps=2)
+pyxel.init(64, 32, fps=30)
 pyxel.load("platformer.pyxres")
 ```
 
@@ -141,9 +155,9 @@ def draw():
     pyxel.blt(28, 12, 0, 0, 16, 8, 8)
 ```
 
-See the [Pyxel Graphics documentation](https://github.com/kitao/pyxel#graphics) for a description of the *pyxel.cls* function, which clears the screen and replaces everything with a specified color, and the *pyxel.blt* function, which copies a defined bitmap area from the resource file and places is in the Pyxel game screen. If you save and run the program now, you will see the eight-by-eight pyxel bird sprite appears on the screen. This sprite was copied from an eight-by-eight pixel area starting at x and y coordinates 0 and 16 in the resource file's Image 0. On the game screen, the upper right corner of the sprite is placed at x and y coordinates of 28 and 12 on the screen, making it appear like the bird is centered in the screen.
+See the [Pyxel Graphics documentation](https://github.com/kitao/pyxel#graphics) for a description of the *pyxel.cls()* function, which clears the screen and replaces everything with a specified color, and the *pyxel.blt()* function, which copies a bitmap area from the resource file and places is in the Pyxel game screen. If you save and run the program now, you will see the eight by eight-pyxel bird sprite appears on the screen. This sprite was copied from an eight by eight-pixel area starting at x and y coordinates 0 and 16 in the resource file's Image 0. On the game screen, the upper right corner of the sprite is placed at x and y coordinates of 28 and 12 on the screen, making it appear like the bird is centered in the screen.
 
-The *pyxel.blt* function has an optional parameter that lets you specify a transparent color on the sprite so it looks better on various backgrounds. In this case, the sprite's background color is [color number 2](https://github.com/kitao/pyxel#color-palette). Add that parameter to the *pyxel.blt* function, as shown below:
+The *pyxel.blt()* function has an optional parameter that lets you specify a transparent color on the sprite so it looks better on various backgrounds. In this case, the sprite's background color is [color number 2](https://github.com/kitao/pyxel#color-palette). Add that parameter to the *pyxel.blt* function, as shown below:
 
 ```python
 def draw():
@@ -153,7 +167,7 @@ def draw():
 
 If you save and run the program now, you will see a window similar to the one below:
 
-![](./Images/pyxel_bird_1.png)
+![The bird sprite](./Images/pyxel_bird_1.png)
 
 ## Sprite animation
 
@@ -178,13 +192,13 @@ def draw():
     pyxel.blt(28, 12, 0, sprite_u, 16, 8, 8, 2)
 ```
 
-When you save and run the program, you see the first problem you need to solve: Python stops the program with an [error](https://stackoverflow.com/questions/370357/unboundlocalerror-on-local-variable-when-reassigned-after-first-use) because the variable *sprite_u* is not available outside the scope of the *update* and *draw* functions.
+When you save and run the program, you see the first problem you need to solve: Python stops the program with an [error](https://docs.python.org/3/faq/programming.html#why-am-i-getting-an-unboundlocalerror-when-the-variable-has-a-value) because the variable *sprite_u* is not available outside the scope of the *update* and *draw* functions.
+
+Now, you are at the point where you have to choose between managing global variables in a program, or using classes.
 
 ## Global variables
 
-One way to make variable assigned in a function available to other functions, and to the main program, is to explicitly define it to be a global variable, using the *global* keyword. Global variable are may be used in the main program's [namespace](https://docs.python.org/3/tutorial/classes.html#python-scopes-and-namespaces) and in any function that declares them.
-
-As shown below, declare the *sprite_u* variable to be a global variable in both functions. This solves the problem, for now, but will get hard to manage as the program gets more complex. Generally, programmers do not want to use global variables to store program state.
+One way to make a variable assigned in a function available to other functions, and to the main program, is to explicitly define it to be a global variable, using the *global* keyword. Global variable may be used in the main program's [namespace](https://docs.python.org/3/tutorial/classes.html#python-scopes-and-namespaces) and in any function that declares them.
 
 Change the *update* and *draw* functions as shown below:
 
@@ -199,15 +213,19 @@ def draw():
     pyxel.blt(28, 12, 0, sprite_u, 16, 8, 8, 2)
 ```
 
+As shown above, you declared the *sprite_u* variable to be a global variable in both functions. This solves the problem for now, but global variables will become difficult to manage as the program gets more complex. Generally, programmers do not want to use global variables to store program state [^4].
+
+[^4]: From [Stack Overflow](https://stackoverflow.com/questions/19158339/why-are-global-variables-evil). A good set of reasons to avoid global variables is: global variables can be altered by any part of the code in the Python module, making it difficult to anticipate problems related to its use; global variables make it difficult to share your code with other developers and make code harder to debug and maintain; and, global variables may make it very difficult to use more advanced programming techniques like automated testing or thread-safe programming.
+
 Now the program runs, the variable *sprite_u* can be assigned in the *update* function and its value can be read in the *draw* function.
 
 ## Changing the speed of sprites
 
-But, the animation is too fast. We could reduce the animation speed by lowering the frame rate but that is not a good solution because it will impact the future versions of the game. 
+However, the animation is moving too fast. We could reduce the animation speed by lowering the game's frame rate but that is not the best solution.
 
-Managing the speed of game elements relative to the game frame rate is one of the first problems you need to solve in game development. As you add more elements, with different movement speeds and animation speeds, you need a way to control how often a piece of code executes relative to the game's frame rate.
+Managing the speed of game elements relative to the game frame rate is one of the first problems you need to solve in game development. One solution is to create yet another global variable that tracks the sprite frame index. 
 
-One solution is to create yet another global variable that tracks the sprite frame index. Increment the frame index once every ten frames. When the frame index has incremented to 3, reset it to zero so it can continue to be used to calculate the sprite animations. For example:
+Increment the global frame index variable once every ten frames. When the frame index has incremented to 3, reset it to zero so it can continue to be used to calculate the sprite animations. For example:
 
 ```python
 animation_index = 0
@@ -226,7 +244,7 @@ Note that you had to assign a value to the *animation_index* variable in the mai
 
 After you save and run the program, the *sprite_u* variable iterates between 0, 8, 16, and back to 0 every ten frames, or third of a second.
 
-![](./Images/bird_animation_1.gif)
+![Animating the bird sprite](./Images/bird_animation_1.gif)
 
 You will use this algorithm multiple times when you have different sprites moving at different speeds. You can imagine how complex it will get if you have to manage it with global variables.
 
@@ -272,7 +290,7 @@ The [*self* object](https://www.digitalocean.com/community/tutorials/how-to-cons
 
 ## Multiple sprites
 
-Another benefit of using classes is realized when you create multiple instances of the same class. For example, you can define a *Sprite* class, which separates all the logic and data associated with the bird sprites from the main program, and create multiple instances of birds on the screen, each with its own position data.
+You realize another benefit of using classes when you create multiple instances of a class. For example, you can define a *Sprite* class, which separates all the logic and data associated with the bird sprites from the main program, and create multiple instances of birds on the screen, each with its own position data.
 
 ```python
 import pyxel
@@ -319,11 +337,11 @@ class App:
 App()
 ```
 
-You see in the example above, each bird object is initialized with data parameters representing its *x* and *y* coordinates on the game screen, and the animation index. When you run the program, you see two birds on the screen in different locations, with each bird seeming to flap it's wings at different times because each bird starts its animation sequence at a different frame set by the animation index.. 
+You see in the example above, each bird object is initialized with data parameters representing its *x* and *y* coordinates on the game screen, and with the animation index. When you run the program, you see two birds on the screen in different locations, with each bird seeming to flap it's wings at different times because each bird starts its animation sequence at a different frame set by the animation index. 
 
 ## Many moving sprites
 
-You can easily add yet another bird, with its own position and animation index, with just one line of code in each of the *App* class's *update* and *draw* methods. You could add a *for* loop that creates hundreds of bird sprites and saves them in a list. Then, you could update and draw those sprites by iterating through the sprite list in each of the *update* and *draw* methods. 
+You can easily add yet another bird, with its own position and animation index, with just one line of code in each of the *App* class's constructor, *update* and *draw* methods. Or, you could add a *for* loop that creates hundreds of bird sprites and saves them in a list. Then, you could update and draw those sprites by iterating through the sprite list in each of the *update* and *draw* methods. 
 
 For example, if we change the *App* class as shown below, we can generate a dozen bird sprites in random locations on the screen:
 
@@ -354,9 +372,9 @@ App()
 
 Running the program shows twelve bird sprites in random locations around the screen, all flapping their wings independently and slowly moving around.
 
-![](./Images/pyxel_birds_3.png)
+![Many bird sprites](./Images/pyxel_birds_3.png)
 
-Defining the bird sprite state in the *Sprite* class allows us to change the behavior of the bird sprites instantiated from that class without changing the rest of the. For example, change the *Sprite* class to make the bird sprites move:
+The *Sprite* class can be modified to change the behavior of the bird sprites without changing the rest of the program code. For example, make the bird sprites move:
 
 ```python
 class Sprite:
@@ -435,7 +453,7 @@ Simplify the main game logic so it just instantiates new sprite objects and call
 App()
 ```
 
-Now, whomever maintains the *game.py* file can concentrate on adding and removing sprites. They can add game features like different screens or interesting backgrounds while leaving the work of improving sprite animation and movement to another programmer who maintains the *sprites* module.
+Now, whomever maintains the *game.py* file can concentrate on adding and removing sprites. The *game.py* module developer can add game features like different screens or interesting backgrounds while leaving the work of improving sprite animation and movement to another programmer who maintains the *sprites.py* module.
 
 ## The *sprites.py* module
 
@@ -512,7 +530,7 @@ class Ball(Sprite):
 
 The Ball class *inherits* the Sprite class's functionality by using the *super* built-in function to call the [super class's constructor method](https://stackoverflow.com/questions/222877/what-does-super-do-in-python-difference-between-super-init-and-expl) in the new class's constructor. 
 
-The *super* function provides a [general-purpose way to call the parent class's constructor method](https://realpython.com/python-super/). It is recommended practice to use the *super* function instead of "hard coding" the Ball class's constructor by explicitly calling the base class's constructor method with the statement, `Sprite.__init__(self)`.
+The *super* function provides a [general-purpose way to call the parent class's constructor method](https://realpython.com/python-super/). It is recommended practice to use the *super* function instead of "hard coding" the Ball class's constructor with the statement, `Sprite.__init__(self)`, which explicitly calls the *Sprite* class's constructor method.
 
 Change the sprite list creation loop in the *App* class constructor to the following, which creates a list with twelve elements: six birds and six balls.
 
@@ -541,7 +559,6 @@ class App:
     def __init__(self):
         pyxel.init(64, 32, fps=30)
         pyxel.load("platformer.pyxres")
- 
         self.sprite_list = []
         for _ in range(6):
             self.sprite_list.append(Sprite())
@@ -563,16 +580,16 @@ App()
 
 Python classes, and the concept of inheritance, enabled you to add a new sprite type with its own position data and its own animation and movement logic by adding just a few lines of code to your game program. 
 
-![](./Images/pyxel_birds_4.png)
+![Different sprites](./Images/pyxel_birds_4.png)
 
 You did not need to ask the other programmer who maintains the *sprites.py* file to make any changes to their file. You can see how using classes can make reusing code easier and how classes support the concept of code re-use and customization, resulting in program simplification.
 
 
 # Conclusion
 
-You built an object-oriented program using Python classes and used concepts like information-hiding, encapsulation, and code re-use that help make developing complex programs easier. You got a taste of what it would be like to work on a larger project with other programmers and how the concepts you excercised in this tutorial can help.
+You built an object-oriented program using Python classes and used concepts like information-hiding, encapsulation, and code re-use that help make developing complex programs easier. You got a taste of what it would be like to work on a larger project with other programmers and how the concepts you exercised in this tutorial can help.
 
-You also learned about building games using the Pyxel framework and created a simple game animation. if you are interested, you will find it realtively easy to add more functionality to the game such as user input and collision detection. Please see the following link to download and run the source code for a full-featured [bird-drop game](https://github.com/blinklet/learning-pyxel/tree/main/bird_drop_game) I created by extending the work already started in this turorial.
+You also learned about building games using the Pyxel framework and created a simple game animation. if you are interested, you will find it relatively easy to add more functionality to the game such as user input and collision detection. For example, see the following link to download and run the source code for a full-featured [bird-drop game](https://github.com/blinklet/learning-pyxel/tree/main/bird_drop_game) I created by extending the work already started in this tutorial.
 
 # More information about Pyxel
 
