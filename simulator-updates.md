@@ -1,8 +1,8 @@
-% Nineteen network emulators and five network simulators you can use in 2023
+% Twenty network emulators and five network simulators you can use in 2023
 
 I surveyed the current state of the art in open-source network emulation and simulation. I also reviewed the development and support status of all the network emulators and network simulators previously featured in my blog.  
 
-Of all the network emulators and simulators I mentioned in my blog over the years, I found that seventeen of them are still active projects. I also found seven new projects that you can try. See below for a brief update about each tool.
+Of all the network emulators and network simulators I mentioned in my blog over the years, I found that eighteen of them are still active projects. I also found seven new projects that you can try. See below for a brief update about each tool.
 
 <!--more-->
 
@@ -38,7 +38,7 @@ While I was refreshing this list, I realized EVE-NG Community Edition is not ope
 
 ## GNS3
 
-[GNS3](https://gns3.com/) continues to deliver new versions. GNS3 is a very popular network emulation tool that is primarily used to emulate networks of commercial routers, but it also supports open-source routers. It is often used by professionals studying for certification exams. [GNS3 version 2.2.37](https://github.com/GNS3) was released in January 2023.
+[GNS3](https://gns3.com/) continues to deliver new versions. GNS3 is a very popular network emulation tool that is primarily used to emulate networks comprised of commercial routers, but it also supports open-source routers. It is often used by professionals studying for certification exams. [GNS3 version 2.2.37](https://github.com/GNS3) was released in January 2023.
 
 ## IMUNES
 
@@ -46,22 +46,21 @@ While I was refreshing this list, I realized EVE-NG Community Edition is not ope
 
 ## Kathara
 
-[Kathara](https://www.kathara.org/) is still being [maintained](https://github.com/KatharaFramework/Kathara). It is a network emulator that uses Python and Docker. It allows configuration and deployment of virtual networks featuring SDN, NFV and traditional routing protocols, such as BGP and OSPF. [Version 3.5.5](https://github.com/KatharaFramework/Kathara/releases/tag/3.5.5) was released in January, 2023. 
+[Kathara](https://www.kathara.org/) is still being [maintained](https://github.com/KatharaFramework/Kathara). It is a network emulator that uses Python and Docker. It allows configuration and deployment of virtual networks featuring SDN, NFV, and traditional routing protocols, such as BGP and OSPF. [Version 3.5.5](https://github.com/KatharaFramework/Kathara/releases/tag/3.5.5) was released in January, 2023. 
 
 Kathara was created by the original developers of [Netkit](https://www.netkit.org/) and is intended to be the next evolution in network emulation. A [fork of the original Netkit](https://github.com/netkit-jh/netkit-jh-build) is still being maintained by another author and has [updated documentation](https://netkit-jh.github.io/docs/).
 
 ## Labtainers
 
-[Labtainers](https://nps.edu/web/c3o/labtainers)
-is still [maintained](https://github.com/mfthomps/Labtainers). It is a network emulator that enable researchers and students to explore network security topics. It has [many lab scenarios](https://nps.edu/web/c3o/labtainer-lab-summary1) based on security topics. [Version 1.3.7](https://github.com/mfthomps/Labtainers/releases/tag/v1.3.7q) was released in January 2023
+[Labtainers](https://nps.edu/web/c3o/labtainers) is still being [maintained](https://github.com/mfthomps/Labtainers). It is a network emulator that enable researchers and students to explore network security topics. It has [many lab scenarios](https://nps.edu/web/c3o/labtainer-lab-summary1) based on security topics. [Version 1.3.7](https://github.com/mfthomps/Labtainers/releases/tag/v1.3.7q) was released in January 2023
 
 ## Linux Network Test Stack
 
-[LNTS](http://lnst-project.org/), the *Linux Network Test Stack*, is still being [maintained](https://github.com/lnst-project/lnst). It is a Python package that enables developers to build network emulation scenarios using a Python program. You may use LNTS to control a network of hardware nodes or to control an emulated network of containers. [LNTS version 15.1](https://github.com/LNST-project/lnst/releases/tag/v15.1) was released in August 2019 but the developer is merging pull requests in GitHub as recent as a few weeks ago so I believe this project is still active.
+The [*Linux Network Test Stack*](http://lnst-project.org/) (LNTS), is still being [maintained](https://github.com/lnst-project/lnst). It is a Python package that enables developers to build network emulation scenarios using a Python program. You may use LNTS to control a network of hardware nodes or to control an emulated network of containers. [LNTS version 15.1](https://github.com/LNST-project/lnst/releases/tag/v15.1) was released in August 2019 but the developer is merging pull requests in GitHub as recent as a few weeks ago so I believe this project is still active.
 
 ## Mininet
 
-[Mininet](http://mininet.org/) published its last version, 2.3.0, two years ago. This open-source network emulator is designed to support research and education in the field of Software Defined Networking systems. On [Mininet's Github repo](https://github.com/mininet/mininet), I see some minor development activity in recent months. [Mininet Wifi](https://mn-wifi.readthedocs.io/en/latest/) has about the same [development activity](https://github.com/intrig-unicamp/mininet-wifi). Both the [Mininet mailing list](https://mailman.stanford.edu/mailman/listinfo/mininet-discuss) and [Mininet WiFi forum](https://groups.google.com/g/mininet-wifi-discuss) are still active. I found some  examples of [building Mininet](https://github.com/gabisurita/network-labs) [labs](https://github.com/mkucukdemir/mininet-topology) using [Python and FRR](https://github.com/bobuhiro11/mininetlab)
+[Mininet](http://mininet.org/) published its last version, 2.3.0, two years ago but it is still being maintained and remains a popular network emulator. It is designed to support research and education in the field of Software Defined Networking systems. On [Mininet's Github repo](https://github.com/mininet/mininet), I see some minor development activity in recent months. [Mininet Wifi](https://mn-wifi.readthedocs.io/en/latest/) has about the same [development activity](https://github.com/intrig-unicamp/mininet-wifi). Both the [Mininet mailing list](https://mailman.stanford.edu/mailman/listinfo/mininet-discuss) and [Mininet WiFi forum](https://groups.google.com/g/mininet-wifi-discuss) are still active. I also found some  examples of [building Mininet](https://github.com/gabisurita/network-labs) [labs](https://github.com/mkucukdemir/mininet-topology) using [Python and FRR](https://github.com/bobuhiro11/mininetlab)
 
 [Mini-NDN](https://github.com/named-data/mini-ndn) is a fork of Mininet designed for emulating Named Data Networking. It's most recent release was at the end of 2021.  
 
@@ -92,6 +91,10 @@ is still [maintained](https://github.com/mfthomps/Labtainers). It is a network e
 ## VNX
 
 [*Virtual Networks over Linux* (VNX)](http://web.dit.upm.es/vnxwiki/index.php/Main_Page) has had no updates since September 2020. But, [new filesystems](http://vnx.dit.upm.es/vnx/filesystems/) were added in January 2023 so there is still support. VNX is an open-source network simulation tool that builds and modifies virtual network test beds automatically from a user-created network description file.
+
+## vrnetlab
+
+[vrnetlab](https://github.com/vrnetlab/vrnetlab) has slowed down development activity. The last commit was in December 2021, which is recent enough. However, on the GitHub repository there are many pull requests open and many issues that have not received a response. I think, for now, I keep listing vrnetlab on the sidebar because some parts of vrnetlab and the vrnetlab documentation may still be useful to users of [Containerlab](https://containerlab.dev/)
 
 # New tools
 
@@ -134,15 +137,13 @@ The [Cooja IoT network emulator](https://docs.contiki-ng.org/en/develop/doc/tuto
 
 # Removed from my list
 
-I removed three projects from my list of network emulators and simulators.
+I removed two projects from my list of network emulators and simulators.
 
 [Antidote](https://github.com/nre-learning/antidote) and [NRE Labs](https://github.com/nre-learning/nrelabs-docs) are retired. See the [announcement on the NRE Labs site](https://nrelabs.io/2021/12/goodbye-for-now/)
-
-[vrnetlab](https://github.com/vrnetlab/vrnetlab) has slowed down development activity. The last commit was in December 2021, which is recent enough. However, on the GitHub repository there are many pull requests open and many issues that have not received a response. I think, for now, I will stop listing vrnetlab on the sidebar. But,  some parts of vrnetlab and the vrnetlab documentation may still be useful to users of [Containerlab](https://containerlab.dev/)
 
 [Wistar](https://github.com/Juniper/wistar) seems to have been abandoned. There have been no updates in four years and no activity in the [Wistar Slack channel](https://wistar-vtm.slack.com/)
 
 # Conclusion
 
-I refreshed my list of network emulators and simulator. I now have eighteen projects on my active list. I found seven new projects that I will look at in the future and determine if any should be added to my list. I removed three projects from my list.
+I refreshed my list of network emulators and simulators. I now have eighteen projects on my active list. I found seven new projects that I will look at in the future and determine if any should be added to my list. I removed two projects from my list.
 
