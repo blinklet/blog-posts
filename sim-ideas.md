@@ -46,6 +46,20 @@ consider frr yang support?
 https://github.com/sonic-net/SONiC/blob/master/doc/mgmt/SONiC_Design_Doc_Unified_FRR_Mgmt_Interface.md
 
 
+
+Batfish as a network simulator?
+https://github.com/batfish/batfish
+Batfish builds complete models of network behavior from device configurations and finds violations of network policies (built-in, user-defined, and best-practices).
+
+Cumulus VX
+https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/
+https://www.nvidia.com/en-us/networking/linux-on-demand/
+    In Lab 1, you’ll explore the basics of NVIDIA Cumulus Linux and Network Command Line Utility (NCLU) before building your workbench. Lab 2 is all about network interfaces and connectivity. Finally, Lab 3 dives into layer-3 routing features, Free Range Routing (FRR), and Border Gateway Protocol (BGP) unnumbered.
+https://docs.nvidia.com/networking-ethernet-software/knowledge-base/
+
+
+
+
 links
 ------
 OMNet++ videos
