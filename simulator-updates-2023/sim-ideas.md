@@ -1,46 +1,3 @@
-Hi Jorge, I assume you want a tool that abstracts the nodes so students do not need to learn a particular network operating system before they experiment with basic concepts. So, I recommend you look at CORE. 
-
-
-
-cnet
-https://www.csse.uwa.edu.au/cnet/index.php
-v3.5.3 updated 4th April 2022
-But need to share some personel info to get the software anmd source code
-Supports macOS on Apple Silicon
-
-
-Filius
-https://gitlab.com/filius1/filius
-https://www.lernsoftware-filius.de/
-https://www.lernsoftware-filius.de/downloads/Introduction_Filius.pdf
-https://www.lernsoftware-filius.de/Herunterladen
-Filius 2.2 The current version is from December 29, 2022:
-https://ent2d.ac-bordeaux.fr/disciplines/sti-college/2019/09/25/filius-un-logiciel-de-simulation-de-reseau-simple-et-accessible/
-Caution: Choose the language when you first open the software. If an error occurs, delete the . filius containing the language settings found in C:\Users\"user name on the network"\AppData\Local\.filius (under win7).
-https://helloworld.raspberrypi.org/articles/HW8-make-networks-interesting-with-filius
-
-
-NESi
-https://github.com/inexio/NESi
-v1.4 relesed February 2021
-no....
-
-
-Openconfig KNE
-https://github.com/openconfig/kne
-0.1.7 December 2022
-Defines a container format proposed for vendors to build appliances based on their own software
-"The idea of this project is to provide a standard "interface" so that vendors can produce a standard container implementation which can be used to build complex topologies."
---- associated with https://www.openconfig.net/
-Nokia support:  https://learn.srlinux.dev/tutorials/infrastructure/kne/srl-with-oc-services/
-                https://github.com/srl-labs/learn-srlinux
-                https://learn.srlinux.dev/tutorials/infrastructure/kne/
-Cisco support:  https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus9000/sw/93x/progammability/guide/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x_chapter_011001.html
-Juniper:  https://www.juniper.net/documentation/us/en/software/junos/open-config/topics/concept/openconfig-overview.html
-
-Overview of openconfig: https://www.techrepublic.com/article/how-to-get-started-with-openconfig-and-yang-models/
-
-go package: https://pkg.go.dev/github.com/openconfig/kne#section-readme
 
 consider frr yang support?
 https://github.com/sonic-net/SONiC/blob/master/doc/mgmt/SONiC_Design_Doc_Unified_FRR_Mgmt_Interface.md
@@ -68,6 +25,20 @@ https://www.youtube.com/channel/UCUZztE5RcobsuNjsTTfvyOQ/playlists
 
 for high school
 =======
+web apps preferred
+
+Filius
+https://gitlab.com/filius1/filius
+https://www.lernsoftware-filius.de/
+https://www.lernsoftware-filius.de/
+https://www.lernsoftware-filius.de/downloads/Introduction_Filius.pdf
+https://www.lernsoftware-filius.de/Herunterladen
+Filius 2.2 The current version is from December 29, 2022:
+https://ent2d.ac-bordeaux.fr/disciplines/sti-college/2019/09/25/filius-un-logiciel-de-simulation-de-reseau-simple-et-accessible/
+Caution: Choose the language when you first open the software. If an error occurs, delete the . filius containing the language settings found in C:\Users\"user name on the network"\AppData\Local\.filius (under win7).
+https://helloworld.raspberrypi.org/articles/HW8-make-networks-interesting-with-filius
+
+
 https://cs.uwaterloo.ca/~m2mazmud/netsim/
 "Web-based network simulator for teaching hacking to high schoolers"
 https://github.com/errorinn/netsim
@@ -93,8 +64,23 @@ https://tetcos.com/netsim-acad.html
 At least the manual provides some good instruction material
 https://www.tetcos.com/downloads/v13.2/NetSim_Experiment_Manual.pdf
 
-Maybe also see if Marrionet still works
+Maybe CORE???
 
+Maybe Psimulator? https://github.com/rkuebert/psimulator (has Java 11 branch) (not much done)
+https://gitlab.fit.cvut.cz/psimulator2/Psimulator2  7 years old, or
+https://github.com/lager1/psimulator2.5  additional features. Try this one?? Yes!
+
+
+
+New posts
+------------
+KNE:  https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/
+
+
+Jeremy Schulman
+Pretty epic run using 
+@go_containerlab
+ as a test bed for my netcad project.  Used netcad to built the containerlab topology from the design, built the startup-configs, deployed the containers, and then validated the operating state.  Video coming soon:
 
 
 Do-it-yourself

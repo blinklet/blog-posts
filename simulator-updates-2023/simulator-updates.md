@@ -20,6 +20,12 @@ The Cloonix web site now has a new address at: [clownix.net](http://clownix.net/
 
 [CloudSim](http://www.cloudbus.org/cloudsim/) is still [maintained](https://github.com/Cloudslab/cloudsim). Cloudsim is a network simulator that enables modeling, simulation, and experimentation of emerging Cloud computing infrastructures and application services. It is part of an [ecosystem](http://www.cloudbus.org/) of [projects and extensions](https://github.com/Cloudslab), such as [iFogSim](https://github.com/Cloudslab/iFogSim). CloudSim release 6 was delivered in August, 2022.
 
+## cnet
+
+The [cnet](https://www.csse.uwa.edu.au/cnet/index.php) network simulator is actively maintained. It enables development of and [experimentation](https://www.csse.uwa.edu.au/cnet/introduction.php) with a variety of data-link layer, network layer, and transport layer networking protocols in networks consisting of any combination of wide-area-networking (WAN), local-area-networking (LAN), or wireless-local-area-networking (WLAN) links [^6]. The project maintainers say it is open source but you must provide you name and e-mail address to download the application source code. [Version 3.5.3 was released in April 2022](https://www.csse.uwa.edu.au/cnet/changelog.php).
+
+[^6]: From https://www.csse.uwa.edu.au/cnet/index.php on February 15, 2023
+
 ## Containerlab
 
 [Containerlab](https://containerlab.dev/) is still very active. Containerlab is an open-source network emulator that quickly builds network test environments in a devops-style workflow. It provides a command-line-interface for orchestrating and managing container-based networking labs and supports containerized router images available from the major networking vendors. The [most recent release was 0.36.1](https://github.com/srl-labs/containerlab/releases/tag/v0.36.1), released in January, 2023.  
@@ -78,9 +84,14 @@ The [*Linux Network Test Stack*](http://lnst-project.org/) (LNTS), is still bein
 
 [ns-3](https://www.nsnam.org/) is actively maintained and supported. It is a free, open-source discrete-event network simulator for Internet systems, targeted primarily for research and educational use. [Version 3.37](https://www.nsnam.org/news/2022/11/01/ns-3-37-released.html) was released in November 2022. The [ns-3 source code](https://gitlab.com/nsnam/ns-3-dev#table-of-contents) is on GitLab.
 
+
 ## OMnet++
 
 [Omnet++](https://omnetpp.org/) is in active development. It is a discreet-event network simulator used by many universities for teaching and research. It is published under a license called the [Academic Public License](https://opensource.org/licenses/APL-1.0), which appears to be unique to the Omnet++ project. Commercial users must pay for a license, but academic or personal use is permitted without payment. Non-commercial developers have rights similar to the GPL. [OMNeT++ 6.0.1](https://github.com/omnetpp/omnetpp/releases/tag/omnetpp-6.0.1) was released in September 2022.
+
+## OpenConfig-KNE
+
+[OpenConfig-KNE](https://github.com/openconfig/kne), *Kubernetes Network Emulation*, is actively maintained. It is a network emulator developed by the [OpenConfig](https://www.openconfig.net/) foundation. It extends basic Kubernetes networking so it can support point-to-point virtual connections between nodes in an arbitrary network topology. Additionally, the [OpenConfig organization encourages](https://www.techrepublic.com/article/how-to-get-started-with-openconfig-and-yang-models/) the major networking equipment vendors like [Nokia](https://learn.srlinux.dev/tutorials/infrastructure/kne/), [Cisco](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus9000/sw/93x/progammability/guide/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x_chapter_011001.html), and [Juniper](https://www.juniper.net/documentation/us/en/software/junos/open-config/topics/concept/openconfig-overview.html) to produce standard data models, for configuration, and standard container implementations, for deployment. OpenConfig-KNE also supports standard containers so it can emulate networks comprised of open-source appliances. [Version 0.1.7 was released in December 2022](https://github.com/openconfig/kne/releases/tag/v0.1.7).
 
 ## Shadow
 
@@ -90,7 +101,7 @@ The [*Linux Network Test Stack*](http://lnst-project.org/) (LNTS), is still bein
 
 ## VNX
 
-[*Virtual Networks over Linux* (VNX)](http://web.dit.upm.es/vnxwiki/index.php/Main_Page) has had no updates since September 2020. But, [new filesystems](http://vnx.dit.upm.es/vnx/filesystems/) were added in January 2023 so there is still support. VNX is an open-source network simulation tool that builds and modifies virtual network test beds automatically from a user-created network description file.
+[*Virtual Networks over Linux* (VNX)](http://web.dit.upm.es/vnxwiki/index.php/Main_Page) is stable since 2020. But, [new filesystems](http://vnx.dit.upm.es/vnx/filesystems/) were added in January 2023 so there is still support. VNX is an open-source network simulation tool that builds and modifies virtual network test beds automatically from a user-created network description file. The latest version of VNX was [released on Sep 14th, 2020](http://web.dit.upm.es/vnxwiki/index.php/Vnx-latest-features)
 
 ## vrnetlab
 
