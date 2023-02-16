@@ -4,8 +4,8 @@ February 16, 2023
 
 Major update to the list of network simulators and emulators. 
 
-* Updated the summaries for projects already in the list: [Cloonix](), [Containerlab](), [CORE](), [EVE-NG](), [GNS-3](), [IMUNES](), [Kathara](), [Mininet](), [ns-3](), [Shadow](), [VNX](), and [vrnetlab]().
-* Added summaries for many other projects: [Cloudsim](), [cnet](), [Labtainters](), [LNTS](), [NEmu](), [NetLab](), [OMnet++](), and [OpenConfig-KNE](). 
+* Updated the summaries for projects already in the list: [Cloonix](http://clownix.net/), [Containerlab](https://containerlab.dev/), [CORE](https://github.com/coreemu/core), [EVE-NG](https://www.eve-ng.net/index.php/community/), [GNS-3](https://www.gns3.com/), [IMUNES](http://imunes.net/), [Kathara](https://www.kathara.org/), [Mininet](http://mininet.org/), [ns-3](https://www.nsnam.org/), [Shadow](https://shadow.github.io/), [VNX](http://www.dit.upm.es/vnx), and [vrnetlab](https://github.com/vrnetlab/vrnetlab).
+* Added summaries for many other projects: [Cloudsim](http://www.cloudbus.org/cloudsim/), [cnet](https://www.csse.uwa.edu.au/cnet/), [Labtainters](https://nps.edu/web/c3o/labtainers), [LNTS](http://lnst-project.org/), [NEmu](https://gitlab.com/v-a/nemu), [NetLab](https://github.com/ipspace/netlab), [OMnet++](https://omnetpp.org/), and [OpenConfig-KNE](https://github.com/openconfig/kne). 
 * Removed old, low-activity projects: [Antidote](https://docs.nrelabs.io/), [Wistar](), [YANS](https://github.com/kennethjiang/YANS), [LStacker](https://brettchaldecott.github.io/lstacker/), [LINE](https://wiki.epfl.ch/line/documents/line.html), [Marionnet](https://www.marionnet.org/site/index.php/en/), [Psimulator2](https://gitlab.fit.cvut.cz/psimulator2/Psimulator2), [DockEmu](https://github.com/jmarcos-cano/dockemu), [NetMirage](https://crysp.uwaterloo.ca/software/netmirage/), [KNet](https://github.com/knetsolutions/knet/), and [ESCAPE](https://github.com/hsnlab/escape).
 
 Older news is archived on the [Network Simulator News](https://www.brianlinkletter.com/open-source-network-simulators/network-simulator-news/) page.
@@ -16,6 +16,7 @@ Older news is archived on the [Network Simulator News](https://www.brianlinklett
 This is a list of open-source network simulators and network emulators that run on Linux or BSD. Please post a comment on this page to let me know about any other open-source network simulation tools I did not include in this list.
 
 <a name="cloonix"></a>
+
 ### Cloonix
 
 <a href="https://www.brianlinkletter.com/tag/cloonix/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2015/06/Cloonixv26-002-1024x617.png" alt="Cloonixv26-002" width="1024" height="617" class="aligncenter size-large wp-image-3646" /></a>
@@ -26,7 +27,50 @@ Please **<a href="https://www.brianlinkletter.com/tag/cloonix/">click here to se
 
 Cloonix web site: <a href="http://clownix.net" target="_blank" rel="noopener noreferrer">http://clownix.net</a>
 
+<a name="Colosseum"></a>
+
+### Colosseum
+
+[Colosseum](https://www.northeastern.edu/colosseum/) provides open-source wireless software for [wireless network emulation](https://docs.srsran.com/en/latest/). The software appears to be based on standard PC hardware and radios. I wonder if one can emulate the radios and build a completely virtual lab, maybe by combining it with [ns-O-RAN](https://openrangym.com/ran-frameworks/ns-o-ran) or [GNUradio](https://wiki.gnuradio.org/index.php?title=What_Is_GNU_Radio). 
+
+This project looks interesting to me because it seems to have open-source versions of key components in wireless RAN and Core networks. The project is made up of many different sub-projects. [srsRAN 22.10](https://github.com/srsran/srsRAN) was released in November 2022.
+
+Colosseum web site: <a href="https://www.northeastern.edu/colosseum/" target="_blank" rel="noopener noreferrer">https://www.northeastern.edu/colosseum/</a>
+
+<a name="Cooja"></a>
+
+### Cooja
+
+The [Cooja IoT network emulator](https://docs.contiki-ng.org/en/develop/doc/tutorials/Running-Contiki-NG-in-Cooja.html) is part of the new [Contiki-ng](https://www.contiki-ng.org/) project. Cooja enables fine-grained simulation/emulation of IoT networks that use the Contiki-NG IOT operating system. The [Contiki-NG forum](https://gitter.im/contiki-ng) is very active, with most questions receiving a reply.
+
+Cooja web site: <a href="https://www.contiki-ng.org/" target="_blank" rel="noopener noreferrer">https://www.contiki-ng.org/</a>
+
+<a name="CrowNet"></a>
+
+### CrowNet
+
+[CrowNet](https://github.com/roVer-HM/crownet) is an open-source simulation environment which models pedestrians using wireless communication. It can be used to evaluate pedestrian communication in urban and rural environments. It is based on Omnet++.
+
+CrowNet web site: <a href="https://github.com/roVer-HM/crownet" target="_blank" rel="noopener noreferrer">https://github.com/roVer-HM/crownet</a>
+
+<a name="CupCarbon"></a>
+
+### CupCarbon
+
+[CupCarbon](http://cupcarbon.com/) simulates wireless networks in cities and [integrates data](https://www.opensourceforu.com/2019/09/simulating-smart-cities-with-cupcarbon/) from [OpenStreetMap](https://www.openstreetmap.org/). The [source code](https://github.com/bounceur/CupCarbon) is available on GitHub.
+
+CupCarbon web site: <a href="http://cupcarbon.com/" target="_blank" rel="noopener noreferrer">http://cupcarbon.com/</a>
+
+<a name="cnet"></a>
+
+### cnet
+
+The [cnet network simulator](http://www.csse.uwa.edu.au/cnet/) enables development of, and [experimentation](https://www.csse.uwa.edu.au/cnet/introduction.php) with, a variety of data-link layer, network layer, and transport layer networking protocols in networks consisting of any combination of wide-area-networking (WAN), local-area-networking (LAN), or wireless-local-area-networking (WLAN) links. The project maintainers say it is open source but you must provide you name and e-mail address to download the application source code.
+
+cnet web site: <a href="http://www.csse.uwa.edu.au/cnet/" target="_blank" rel="noopener noreferrer">http://www.csse.uwa.edu.au/cnet/</a>
+
 <a name="containerlab"></a>
+
 ### Containerlab
 
 <img src="https://www.brianlinkletter.com/wp-content/uploads/2021/05/containerlab-splash-001-1024x568.png" alt="" width="1024" height="568" class="aligncenter size-large wp-image-5660" />
@@ -37,9 +81,10 @@ Containerlab supports containerized router images available from the major netwo
 
 Please **<a href="https://www.brianlinkletter.com/tag/Containerlab/">click here to see my posts about Containerlab</a>**.
 
-Containerlab web site: <a href="https://containerlab.srlinux.dev/" target="_blank" rel="noopener noreferrer">https://containerlab.srlinux.dev/</a> and <a href="https://github.com/srl-labs/containerlab" target="_blank" rel="noopener noreferrer">https://github.com/srl-labs/containerlab</a>
+Containerlab web site: <a href="https://containerlab.srlinux.dev/" target="_blank" rel="noopener noreferrer">https://containerlab.dev/</a> and <a href="https://github.com/srl-labs/containerlab" target="_blank" rel="noopener noreferrer">https://github.com/srl-labs/containerlab</a>
 
 <a name="core"></a>
+
 ### CORE
 
 <a href="https://www.brianlinkletter.com/tag/core/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2013/02/CORE_possible_desktop_1.png" alt="CORE desktop" width="1024" height="768" class="aligncenter size-full wp-image-726" /></a>
@@ -53,6 +98,7 @@ Please **<a href="https://www.brianlinkletter.com/tag/core/">click here to see m
 CORE web site: <a href="http://cs.itd.nrl.navy.mil/work/core/index.php" target="_blank" rel="noopener noreferrer">http://cs.itd.nrl.navy.mil/work/core/index.php</a> and <a href="https://github.com/coreemu/core" target="_blank" rel="noopener noreferrer">https://github.com/coreemu/core</a>
 
 <a name="unetlab"></a><a name="eve-ng"></a>
+
 ### EVE-NG
 
 <img src="https://www.brianlinkletter.com/wp-content/uploads/2016/01/UNL.jpg" alt="UNL" width="996" height="698" class="aligncenter size-full wp-image-4412" />
@@ -64,6 +110,7 @@ EVE-NG is available in two editions: a professional version and a <a href="https
 EVE-NG web site: <a href="https://www.eve-ng.net/community/" target="_blank" rel="noopener noreferrer">https://www.eve-ng.net/community/</a> 
 
 <a name="gns3"></a>
+
 ### GNS3
 
 <a href="https://www.brianlinkletter.com/tag/GNS3/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2014/01/Using-GNS3-cover-border2-1024x641.png" alt="Open-source Linux GNS3 simulation" width="1024" height="641" class="aligncenter size-large wp-image-1708" /></a>
@@ -77,6 +124,7 @@ Please **<a href="https://www.brianlinkletter.com/tag/GNS3/">click here to see m
 GNS3 web site: <a href="http://www.gns3.com/" target="_blank" rel="noopener noreferrer">http://www.gns3.com</a>
 
 <a name="imunes"></a>
+
 ### IMUNES
 
 <a href="https://www.brianlinkletter.com/tag/imunes/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2013/02/IMUNES-Snapshot-1-Running-1024x820.jpg" alt="IMUNES open-source network routing simulator" width="1024" height="820" class="aligncenter size-large wp-image-949" /></a>
@@ -90,6 +138,7 @@ Please **<a href="https://www.brianlinkletter.com/tag/imunes/">click here to see
 IMUNES web site: <a href="http://www.imunes.net" target="_blank" rel="noopener noreferrer">http://www.imunes.net</a> or <a href="https://github.com/imunes/" target="_blank" rel="noopener noreferrer">https://github.com/imunes</a>
 
 <a name="netkit"></a><a name="kathara"></a>
+
 ### Kathara
 
 <a href="https://www.brianlinkletter.com/tag/netkit/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2013/01/Netkit_Knoppix_DVD-1024x640.png" alt="Netkit open source single-area OSPF pre-configured lab" width="1024" height="640" class="aligncenter size-large wp-image-604" /></a>
@@ -101,9 +150,32 @@ Please **<a href="https://www.brianlinkletter.com/tag/netkit/">click here to see
 Kathara web site: <a href="http://www.kathara.org/" target="_blank" rel="noopener noreferrer">http://www.kathara.org/</a>
 Netkit web site: <a href="http://wiki.netkit.org" target="_blank" rel="noopener noreferrer">http://wiki.netkit.org</a>
 
+<a name="labtainers"></a>
 
+### Labtainers
+
+[Labtainers](https://my.nps.edu/web/c3o/labtainers) is a network emulator based on Docker containers that also provides [many prepared labs](https://my.nps.edu/web/c3o/labtainer-lab-summary1) that focus on cybersecurity scenarios. Its [source code](https://github.com/mfthomps/Labtainers)) is published on GitHub
+
+Labtainers web site: <a href="https://my.nps.edu/web/c3o/labtainers" target="_blank" rel="noopener noreferrer">https://my.nps.edu/web/c3o/labtainers</a>
+
+<a name="LNTS"></a>
+
+### Linux Network Test Stack
+
+The [*Linux Network Test Stack*](http://lnst-project.org/) (LNTS), is a Python package that enables developers to build network emulation scenarios using a Python program. You may use LNTS to control a network of hardware nodes or to control an emulated network of containers. The [source code](https://github.com/lnst-project/lnst) is available on GitHub.
+
+LNTS web site: <a href="http://lnst-project.org/" target="_blank" rel="noopener noreferrer">http://lnst-project.org/</a>
+
+<a name="Meshtasticator"></a>
+
+### Meshtasticator
+
+[Meshtasticator](https://github.com/GUVWAF/Meshtasticator) is an emulator for Meshtastic software.  Meshtasticator enables you to emulate the operation of a network of Meshtastic devices communicating with teach other over LoRa radio. [Meshtastic](https://meshtastic.org/) is a project that enables you to use inexpensive LoRa radios as a long range off-grid communication platform in areas without existing or reliable communications infrastructure. 
+
+Meshtasticator web site: <a href="https://github.com/GUVWAF/Meshtasticator" target="_blank" rel="noopener noreferrer">https://github.com/GUVWAF/Meshtasticator</a>
 
 <a name="mininet"></a>
+
 ### Mininet
 
 <a href="https://www.brianlinkletter.com/tag/mininet/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2014/12/MiniEdit-503b-1024x641.png" alt="MiniEdit-503b" width="1024" height="641" class="aligncenter size-large wp-image-3425" /></a>
@@ -117,14 +189,30 @@ Some researchers have created forks of Mininet that focus on specific technologi
 * [Mini-NDN](https://github.com/named-data/mini-ndn)
 * [Mini-CCNx](https://github.com/chesteve/mn-ccnx/wiki)
 * [Mininet-WiFi](https://github.com/intrig-unicamp/mininet-wifi)
-* [ESCAPE](http://sb.tmit.bme.hu/mediawiki/index.php/ESCAPE)
+* [Containernet](https://github.com/containernet/containernet)
 
 Please **<a href="https://www.brianlinkletter.com/tag/mininet/">click here to see my posts about Mininet</a>**.
 
 Mininet web site: <a href="http://www.mininet.org" target="_blank" rel="noopener noreferrer">http://www.mininet.org</a>
 
+<a name="NEmu"></a>
+
+### NEmu
+
+[NEmu](https://gitlab.com/v-a/nemu), the *Network Emulator for Mobile Universes*, creates QEMU VMs to build a dynamic virtual network and does not require root access to your computer. NEmu users write Python scripts to describe the network topology and functionality. 
+
+NEmu web site: <a href="https://gitlab.com/v-a/nemu" target="_blank" rel="noopener noreferrer">https://gitlab.com/v-a/nemu</a>
+
+<a name="Netlab"></a>
+
+### Netlab
+
+[NetLab](https://github.com/ipspace/netlab) is actively maintained. NetLab uses Libvirt and Vagrant to set up a simulated network of configured, ready-to-use devices. It brings DevOps-style infrastructure-as-code and CI/CD concepts to networking labs.
+
+Netlab web site: <a href="https://github.com/ipspace/netlab" target="_blank" rel="noopener noreferrer">https://github.com/ipspace/netlab</a>
 
 <a name="ns3"></a>
+
 ### NS-3
 
 <img src="https://www.brianlinkletter.com/wp-content/uploads/2016/01/Ns-3-logo.png" alt="Ns-3-logo" width="492" height="90" class="aligncenter size-full wp-image-4349" />
@@ -135,11 +223,34 @@ NS-3 can run real software on simulated nodes using its [Direct Code Execution](
 
 NS-3 is meant to replace <a href="http://nsnam.sourceforge.net/wiki/index.php/Main_Page" target="_blank" rel="noopener noreferrer">NS-2</a>, a previous version of the network simulator. NS-2 is no longer actively maintained but is still used by some researchers.
 
-I have not used NS-3, yet.
-
 NS-3 web site: <a href="https://www.nsnam.org/" target="_blank" rel="noopener noreferrer">https://www.nsnam.org/</a>
 
+<a name="omnet"></a>
+
+### OMNet++
+
+[OMNeT++ discrete event simulator](https://omnetpp.org/intro/) and the [INET Framework](https://inet.omnetpp.org/) combine to simulate wired, wireless and mobile networks. OMNet++ is a discreet-event network simulator used by many universities for teaching and research. It's [source code](https://github.com/omnetpp/omnetpp) is published under a license called the [Academic Public License](https://opensource.org/licenses/APL-1.0), which appears to be unique to the Omnet++ project. Commercial users must pay for a license, but academic or personal use is permitted without payment. Non-commercial developers have rights similar to the GPL.
+
+OMNet++ web site: <a href="https://omnetpp.org/" target="_blank" rel="noopener noreferrer">https://omnetpp.org/</a>
+
+<a name="KNE"></a>
+
+### OpenConfig-KNE
+
+[OpenConfig-KNE](https://github.com/openconfig/kne), *Kubernetes Network Emulation*, is a network emulator developed by the [OpenConfig](https://www.openconfig.net/) foundation. It extends basic Kubernetes networking so it can support virtual connections between nodes in an arbitrary network topology. Additionally, the [OpenConfig organization encourages](https://www.techrepublic.com/article/how-to-get-started-with-openconfig-and-yang-models/) the major networking equipment vendors like [Nokia](https://learn.srlinux.dev/tutorials/infrastructure/kne/), [Cisco](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus9000/sw/93x/progammability/guide/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x/b-cisco-nexus-9000-series-nx-os-programmability-guide-93x_chapter_011001.html), and [Juniper](https://www.juniper.net/documentation/us/en/software/junos/open-config/topics/concept/openconfig-overview.html) to produce standard data models, for configuration, and standard container implementations, for deployment. OpenConfig-KNE also supports standard containers so it can emulate networks comprised of open-source appliances.
+
+OpenConfig-KNE web site: <a href="https://github.com/openconfig/kne" target="_blank" rel="noopener noreferrer">https://github.com/openconfig/kne</a>
+
+<a name="Tinet"></a>
+
+### Tinet
+
+[Tinet](https://github.com/tinynetwork/tinet), or *Tiny Network*,  is another container-based network emulator that has a few good scenarios described in the *examples* folder in its repository.  It is intended to be a simple tool that takes a YAML config file as input and generates a shell script to construct virtual network. [Version 0.0.2](https://github.com/tinynetwork/tinet/releases/tag/v0.0.2) was released in July 2020 but [development has continued](https://github.com/tinynetwork/tinet) since then, with GitHub pull requests being merged as recently as January 2023
+
+Tinet web site: <a href="https://github.com/tinynetwork/tinet" target="_blank" rel="noopener noreferrer">https://github.com/tinynetwork/tinet</a>
+
 <a name="shadow"></a>
+
 ### Shadow
 
 <img src="https://www.brianlinkletter.com/wp-content/uploads/2016/01/Shadow.jpg" alt="Shadow" width="872" height="506" class="aligncenter size-full wp-image-4351" />
@@ -153,6 +264,7 @@ I have not yet used Shadow. It seems to be useful to developers who want to test
 Shadow network simulator web site: <a href="https://shadow.github.io/" target="_blank" rel="noopener noreferrer">https://shadow.github.io/</a>
 
 <a name="vnx"></a>
+
 ### VNX and VNUML
 
 <a href="https://www.brianlinkletter.com/tag/vnx/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2013/12/VNX-desktop-border-1024x640.png" alt="VNX linux open-source network simulator" width="1024" height="640" class="aligncenter size-large wp-image-1560" /></a>
@@ -166,6 +278,7 @@ Please **<a href="https://www.brianlinkletter.com/tag/vnx/">click here to see my
 VNX web site: <a href="http://www.dit.upm.es/vnx" target="_blank" rel="noopener noreferrer">http://www.dit.upm.es/vnx</a>
 
 <a name="vrnetlab"></a>
+
 ### vrnetlab
 
 <img src="https://www.brianlinkletter.com/wp-content/uploads/2019/03/vrnetlag-logo.png" alt="" width="822" height="184" class="aligncenter size-full wp-image-5379" />
@@ -177,29 +290,60 @@ Please **<a href="https://www.brianlinkletter.com/tag/vrnetlab/">click here to s
 vrnetlab web site: <a href="https://github.com/plajjan/vrnetlab" target="_blank" rel="noopener noreferrer">https://github.com/plajjan/vrnetlab</a>
 
 <a name="devops"></a>
+
 ### Do it yourself using Linux tools and applications
 
-<img src="https://www.brianlinkletter.com/wp-content/uploads/2016/01/devstack2.png" alt="devstack2" width="1024" height="512" class="aligncenter size-full wp-image-4466" />
+<img src="https://www.brianlinkletter.com/wp-content/uploads/2019/02/libvirt-splash-1024x599.png" alt="" width="1024" height="599" class="aligncenter size-large wp-image-5327" />
 
-Linux provides many different ways to build a network emulator using open-source<a href="https://www.brianlinkletter.com/tag/DevOps/">virtualization technology and tools</a>. Some examples are: KVM and Libvirt, Docker and Compose, Openstack and Devstack, VirtualBox, Vagrant, Ansible, Linux bridges, Open vSwitch, and many more. 
+Linux provides many different ways to build a network emulator using open-source<a href="https://www.brianlinkletter.com/tag/DevOps/"> virtualization technology and tools</a>. Some examples are: 
+
+* [KVM](https://www.linux-kvm.org/page/Main_Page), [QEMU](https://wiki.qemu.org/Main_Page), and [Libvirt](https://libvirt.org/), 
+* [Openstack](https://www.openstack.org/) and [Devstack](https://docs.openstack.org/devstack/latest/), 
+* [VirtualBox](https://www.virtualbox.org/), 
+* [Vagrant](https://www.vagrantup.com/), 
+* [Ansible](https://www.ansible.com/), 
+* [Linux bridges](https://developers.redhat.com/articles/2022/04/06/introduction-linux-bridging-commands-and-features), 
+* [Open vSwitch](https://www.openvswitch.org/),
+* [Docker](https://www.docker.com/) and [Compose](https://docs.docker.com/compose/),
+* [Podman](https://podman.io/)
+* [LXD](https://linuxcontainers.org/lxd/) and [LXC](https://linuxcontainers.org/lxc/introduction/)
+* [KinD](https://github.com/kubernetes-sigs/kind), 
+* [k8s-topo](https://github.com/networkop/k8s-topo),
+* [docker-topo](https://github.com/networkop/docker-topo),
+* [meshnet-cni](https://github.com/networkop/meshnet-cni),
+* [NSM](https://networkservicemesh.io/),
+* and many more. 
 
 Many of the network emulators described in this blog us some of the tools mentioned above to implement their functionality.
 
 Please **<a href="https://www.brianlinkletter.com/tag/DevOps/">click here to see my posts about building your own network emulator</a>**.
 
-### Other Emulators and Simulators ###
+### Demonstrations for high-school students
 
-I list projects below that are either very new or that are older with low development activity.
+The following projects are suitable for educators in secondary schools, who teach students aged 13 to 18. Most of these projects animate the basic functions of a communications network but they do not really simulate or emulate network functionality.
 
-#### New projects (on the radar) ####
+#### Free and open-source
 
-[Containernet](https://github.com/containernet/containernet) is a fork of the Mininet network emulator that allows you to use Docker containers as hosts in emulated network topologies.
+The [Educational Network Simulator](http://malkiah.github.io/NetworkSimulator/) is a very simple educational network simulator intended to be used with 15-16 year old students. It has a [web interface](http://malkiah.github.io/NetworkSimulator/simulator01.html). The source code is available on GitHub. The author provides a series of YouTube videos explaining [how it works and how to use it](https://www.youtube.com/playlist?list=PLx8u37tswCijgs5fGrKyCzOQ78uFZ3SMO).
 
-The [Educational Network Simulator](http://malkiah.github.io/NetworkSimulator/) is a very simple educational network simulator intended to be used with 15-16 year old students.  
+[CS4G Netsim](https://netsim.erinn.io/) is a Web-based network simulator for teaching hacking to high schoolers. It demonstrates some basic security issues that Internet users should be aware of. The [source code](https://github.com/errorinn/netsim) is posted on GitHub. This seems to have been a university student's project, presented as a [conference paper](https://www.usenix.org/conference/ase17/workshop-program/presentation/atwater).
 
-[Labtainers](https://my.nps.edu/web/c3o/labtainers) is a network emulator based on Docker containers that also provides [many prepared labs](https://my.nps.edu/web/c3o/labtainer-lab-summary1) that focus on cybersecurity scenarios.
+[Filius](https://www.lernsoftware-filius.de/Herunterladen) FILIUS is a program designed to teach students about the internet and its applications. It is a standalone application for Windows, Mac and Linux. The project offers [Filius introduction e-book](https://www.lernsoftware-filius.de/downloads/Introduction_Filius.pdf) and a [full set of resources](https://www.lernsoftware-filius.de/Begleitmaterial) that help teach students basic network knowledge. The [source code](https://gitlab.com/filius1/filius) is available on GitLab.
 
-The [cnet network simulator](http://www.csse.uwa.edu.au/cnet/) enables development of and experimentation with a variety of networking protocols in WAN, LAN, and WLAN networks.
+[Psimulator2.5](https://github.com/lager1/psimulator2.5) is a Java application that demonstrates basic network functions in a dynamic way.  It allows students to build virtual network consisting of PCs, routers, and switches. The [source code](https://github.com/lager1/psimulator2.5) is available on GitHub. See my [posts](https://www.brianlinkletter.com/tag/psimulator2/) about the older version of this tool, Psimulator2.
 
-[OMNeT++ discrete event simulator](https://omnetpp.org/intro/) and the [INET Framework](https://inet.omnetpp.org/) combine to simulate wired, wireless and mobile networks.
+#### Registration required
+
+[Code.org's Internet Simulator](https://studio.code.org/s/netsim/) is web-based tool combined with a hosted [learning program](https://code.org/educate/csp) offered by [code.org](https://code.org/). It is not open-source. 
+
+[PT Anywhere](https://pt-anywhere.kmi.open.ac.uk/) is a network simulator based on Cisco Learning Academy's Packet Tracer and made available via a [free training course](https://www.open.edu/openlearn/digital-computing/discovering-computer-networks-hands-on-the-open-networking-lab/content-section-overview?active-tab=description-tab) offered by the [Open Networking Lab](https://onl.kmi.open.ac.uk/). It is not open-source.
+
+#### Commercial
+
+[NetSim Academic](https://tetcos.com/netsim-acad.html) is a commercial network simulator that requires a paid license. It is available as a downloaded application or as a [web-based service](https://tetcos.com/blog/2020/09/). The [NetSim Experiment manual](https://www.tetcos.com/downloads/v13.2/NetSim_Experiment_Manual.pdf) provides good learning resources for students. This is a full-featured tool that advanced secondary-school programs may find it usable, but it may be more suitable for universities. Unfortunately, you must contact a salesperson to find out the cost.
+
+
+
+
+
 
