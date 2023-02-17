@@ -324,11 +324,19 @@ The following projects are suitable for educators in secondary schools, who teac
 
 #### Free and open-source
 
+<a name="ENS"></a>
+
 The [Educational Network Simulator](http://malkiah.github.io/NetworkSimulator/) is a very simple educational network simulator intended to be used with 15-16 year old students. It has a [web interface](http://malkiah.github.io/NetworkSimulator/simulator01.html). The source code is available on GitHub. The author provides a series of YouTube videos explaining [how it works and how to use it](https://www.youtube.com/playlist?list=PLx8u37tswCijgs5fGrKyCzOQ78uFZ3SMO).
+
+<a name="CS4G"></a>
 
 [CS4G Netsim](https://netsim.erinn.io/) is a Web-based network simulator for teaching hacking to high schoolers. It demonstrates some basic security issues that Internet users should be aware of. The [source code](https://github.com/errorinn/netsim) is posted on GitHub. This seems to have been a university student's project, presented as a [conference paper](https://www.usenix.org/conference/ase17/workshop-program/presentation/atwater).
 
-[Filius](https://www.lernsoftware-filius.de/Herunterladen) FILIUS is a program designed to teach students about the internet and its applications. It is a standalone application for Windows, Mac and Linux. The project offers [Filius introduction e-book](https://www.lernsoftware-filius.de/downloads/Introduction_Filius.pdf) and a [full set of resources](https://www.lernsoftware-filius.de/Begleitmaterial) that help teach students basic network knowledge. The [source code](https://gitlab.com/filius1/filius) is available on GitLab.
+<a name="Filius"></a>
+
+[Filius](https://www.lernsoftware-filius.de/Herunterladen) is a program designed to teach students about the internet and its applications. It is a standalone application for Windows, Mac and Linux. The project offers [Filius introduction e-book](https://www.lernsoftware-filius.de/downloads/Introduction_Filius.pdf) and a [full set of resources](https://www.lernsoftware-filius.de/Begleitmaterial) that help teach students basic network knowledge. The [source code](https://gitlab.com/filius1/filius) is available on GitLab.
+
+<a name="Filius"></a>
 
 [Psimulator2.5](https://github.com/lager1/psimulator2.5) is a Java application that demonstrates basic network functions in a dynamic way.  It allows students to build virtual network consisting of PCs, routers, and switches. The [source code](https://github.com/lager1/psimulator2.5) is available on GitHub. See my [posts](https://www.brianlinkletter.com/tag/psimulator2/) about the older version of this tool, Psimulator2.
 

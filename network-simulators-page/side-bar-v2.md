@@ -20,17 +20,15 @@
 </li>
 </ul>
 
-# Network Emulators
+# Network Emulators for Engineers
 
 <ul>
 <li>
 <a href="https://www.brianlinkletter.com/tag/cloonix/">Cloonix</a>
 </li>
+
 <li>
-<a href="https://www.brianlinkletter.com/tag/Containerlab/">Containerlab</a>
-</li>
-<li>
-<a href="https://www.brianlinkletter.com/tag/core/">CORE</a>
+<a href="https://www.brianlinkletter.com/tag/core/">CORE</a> or <a href="https://www.brianlinkletter.com/tag/imunes/">IMUNES</a>
 </li>
 <li>
 <a href="https://www.brianlinkletter.com/open-source-network-simulators/#unetlab">EVE-NG</a>
@@ -38,21 +36,13 @@
 <li>
 <a href="https://www.brianlinkletter.com/tag/gns3/">GNS3</a>
 </li>
+</ul>
 
+# Network Emulators for Developers
+
+<ul>
 <li>
-<a href="https://www.brianlinkletter.com/tag/imunes/">IMUNES</a>
-</li>
-<li>
-<a href="https://www.brianlinkletter.com/open-source-network-simulators/#netkit">Kathara</a>
-</li>
-<li>
-<a href="https://my.nps.edu/web/c3o/labtainers" target="_blank" rel="noopener noreferrer">Labtainers</a>
-</li>
-<li>
-<a href="http://lnst-project.org/" target="_blank" rel="noopener noreferrer">Linux Network Test Stack</a>
-</li>
-<li>
-<a href="https://www.brianlinkletter.com/tag/mininet/">Mininet</a> SDN
+<a href="https://www.brianlinkletter.com/tag/Containerlab/">Containerlab</a>
 </li>
 <li>
 <a href="https://github.com/ipspace/netlab" target="_blank" rel="noopener noreferrer">NetLab</a>
@@ -61,17 +51,20 @@
 <a href="https://github.com/openconfig/kne" target="_blank" rel="noopener noreferrer">OpenConfig-KNE</a>
 </li>
 <li>
-<a href="https://github.com/tinynetwork/tinet" target="_blank" rel="noopener noreferrer">TinyNet</a>
-</li>
-<li>
 <a href="https://www.brianlinkletter.com/tag/vrnetlab/">vrnetlab</a>
 </li>
 <li>
-<a href="https://www.brianlinkletter.com/tag/vnx/">VNX and VNUML</a>
+<a href="http://lnst-project.org/" target="_blank" rel="noopener noreferrer">Linux Network Test Stack</a>
 </li>
-
 </ul>
 
+# Software Defined Networks
+
+<ul>
+<li>
+<a href="https://www.brianlinkletter.com/tag/mininet/">Mininet</a>
+</li>
+</ul>
 
 # Mobile and Radio Networks
 
@@ -96,11 +89,24 @@
 </li>
 </ul>
 
+# Network Emulators by Universities
+
+<ul>
+<li>
+<a href="https://www.brianlinkletter.com/open-source-network-simulators/#netkit">Kathara</a>
+</li>
+<li>
+<a href="https://my.nps.edu/web/c3o/labtainers" target="_blank" rel="noopener noreferrer">Labtainers</a>
+</li>
+<li>
+<a href="https://www.brianlinkletter.com/tag/vnx/">VNX and VNUML</a>
+</li>
+
+</ul>
 
 
 
-
-# Network Demonstrators
+# Network Demonstrators for High School Students
 
 <ul>
 <li>
@@ -122,5 +128,8 @@
 <ul>
 <li>
 <a href="https://www.brianlinkletter.com/tag/DevOps/">Do it yourself</a> using Linux tools and applications
+</li>
+<li>
+<a href="https://github.com/tinynetwork/tinet" target="_blank" rel="noopener noreferrer">TinyNet</a>
 </li>
 </ul>
