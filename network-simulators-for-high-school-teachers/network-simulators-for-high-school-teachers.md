@@ -75,7 +75,7 @@ Students must follow the course to access the simulator so it is not suitable fo
 
 NetSim offers a set of [learning resources](https://tetcos.com/netsim-acad.html) aimed at students. For example, the [NetSim Experiment manual](https://www.tetcos.com/downloads/v13.2/NetSim_Experiment_Manual.pdf) provides good examples of various network setups. 
 
-NetSim is a full-featured tool that advanced secondary-school programs may find it usable, but it may be more suitable for universities, in year one or two of a network engineering curriculum. NetSim seems to be simple enough to use while allowing users to explore advanced topics as they progress in their studies. 
+NetSim is a full-featured tool that advanced secondary-school programs may find it usable, but it may be more suitable for universities, in the first or second year of a network engineering curriculum. NetSim seems to be simple enough to use while allowing users to explore advanced topics as they progress in their studies. 
 
 Normally, I would not feature a commercial product in my blog but I noticed that many educators were recommending NetSim to their peers. I felt that I should mention it to make this post complete. Unfortunately, you must contact a salesperson to find out the cost.
 
