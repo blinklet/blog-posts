@@ -52,7 +52,7 @@ While I was refreshing this list, I realized EVE-NG Community Edition is not ope
 
 ## Kathara
 
-[Kathara](https://www.kathara.org/) is still being [maintained](https://github.com/KatharaFramework/Kathara). It is a network emulator that uses Python and Docker. It allows configuration and deployment of virtual networks featuring SDN, NFV, and traditional routing protocols, such as BGP and OSPF. [Version 3.5.5](https://github.com/KatharaFramework/Kathara/releases/tag/3.5.5) was released in January, 2023. 
+[Kathara](https://www.kathara.org/) is still being [maintained](https://github.com/KatharaFramework/Kathara). It is a network emulator that uses Kubernetes as virtualization manager, which lets you run network emulation scenarios on a variety of environments, including the public cloud. It allows configuration and deployment of virtual networks featuring SDN, NFV, and traditional routing protocols, such as BGP and OSPF. Kathara offers Python APIs that allow user to script the creation of network scenarios. [Version 3.5.5](https://github.com/KatharaFramework/Kathara/releases/tag/3.5.5) was released in January, 2023. 
 
 Kathara was created by the original developers of [Netkit](https://www.netkit.org/) and is intended to be the next evolution in network emulation. A [fork of the original Netkit](https://github.com/netkit-jh/netkit-jh-build) is still being maintained by another author and has [updated documentation](https://netkit-jh.github.io/docs/).
 
