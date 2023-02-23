@@ -42,3 +42,16 @@ Then you don't need to run flatpak run command to start programs
 
 Then search for filius
 
+Switches to German next time you launch. Solution is: https://gitlab.com/filius1/filius/-/issues/61
+
+
+Youtube
+https://www.youtube.com/watch?v=1o7BUnAtwYA&list=PLp-hd7MmooQ1mccBeEB31MXVtg01RUs1y
+
+
+
+
+
+Status. Author is posting issues since last release: https://gitlab.com/filius1/filius/-/issues
+Loosk like he is creating a list of potential features for the next release. But, still based on old version of Java.
+
