@@ -139,15 +139,19 @@ IMUNES web site: <a href="http://www.imunes.net" target="_blank" rel="noopener n
 
 <a name="netkit"></a><a name="kathara"></a>
 
-### Kathara
+### Kathará
 
 <a href="https://www.brianlinkletter.com/tag/netkit/"><img src="https://www.brianlinkletter.com/wp-content/uploads/2013/01/Netkit_Knoppix_DVD-1024x640.png" alt="Netkit open source single-area OSPF pre-configured lab" width="1024" height="640" class="aligncenter size-large wp-image-604" /></a>
 
-<a href="https://www.brianlinkletter.com/tag/netkit/">Kathara</a> is a new version of <a href="https://www.brianlinkletter.com/tag/netkit/">Netkit</a>, implemented using modern technologies like Docker, and backwards-compatible with Netkit labs. The Netkit project's web site has a long list of interesting lab scenarios to practice, with documentation for each scenario. 
+[Kathará](https://www.kathara.org/) is a network emulator that can run either on a single host leveraging Docker or on a cluster using Kubernetes. It can run network emulation scenarios on a variety of operating systems such as Windows, Mac, and Linux, and in other environments such as data centers or the public cloud. It allows configuration and deployment of virtual networks featuring SDN, NFV, and traditional routing protocols, such as BGP and OSPF. Kathará offers Python APIs that allow user to script the creation of network scenarios.
 
-Please **<a href="https://www.brianlinkletter.com/tag/netkit/">click here to see my posts about Kathara and Netkit</a>**.
+Kathará was created by the original developers of [Netkit](https://www.netkit.org/) and is intended to be the next evolution in network emulation. Kathará is backwards-compatible with Netkit labs. The Netkit project's web site has a long list of interesting lab scenarios to practice, with documentation for each scenario.
 
-Kathara web site: <a href="http://www.kathara.org/" target="_blank" rel="noopener noreferrer">http://www.kathara.org/</a>
+A [fork of the original Netkit](https://github.com/netkit-jh/netkit-jh-build) is still being maintained by another author and has [updated documentation](https://netkit-jh.github.io/docs/).
+
+Please **<a href="https://www.brianlinkletter.com/tag/netkit/">click here to see my posts about Kathará and Netkit</a>**.
+
+Kathará web site: <a href="http://www.kathara.org/" target="_blank" rel="noopener noreferrer">http://www.kathara.org/</a>
 Netkit web site: <a href="http://wiki.netkit.org" target="_blank" rel="noopener noreferrer">http://wiki.netkit.org</a>
 
 <a name="labtainers"></a>
