@@ -63,7 +63,11 @@ Read the rest of this post for information about the latest open-source network 
   * The [*Mininet* mailing list](https://mailman.stanford.edu/pipermail/mininet-discuss/) is still active
   * The [*Mininet* source code](https://github.com/mininet/mininet) is on GitHub.
   * The [*Mininet-WiFi*](https://mininet-wifi.github.io/) variant is also stable and still supported. The author continues to respond to [GitHub Issues](https://github.com/intrig-unicamp/mininet-wifi) in a timely manner.
-       
+
+* **[Containernet](https://containernet.github.io/)**
+  * *Containernet* continues to be maintained. While its last official release was in 2019, its source code has received updates as recently as December, 2023.
+  * The [*Containernet* source code](https://github.com/containernet/containernet) is on GitHub.
+
 ### Mobile and Radio Networks
 
 * **[Colosseum](https://www.northeastern.edu/colosseum/)**
