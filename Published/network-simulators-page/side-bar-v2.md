@@ -28,7 +28,10 @@
 </li>
 
 <li>
-<a href="https://www.brianlinkletter.com/tag/core/">CORE</a> or <a href="https://www.brianlinkletter.com/tag/imunes/">IMUNES</a>
+<a href="https://www.brianlinkletter.com/tag/core/">CORE</a>
+</li>
+<li>
+<a href="https://www.brianlinkletter.com/tag/imunes/">IMUNES</a>
 </li>
 <li>
 <a href="https://www.brianlinkletter.com/open-source-network-simulators/#unetlab">EVE-NG</a>
@@ -45,7 +48,7 @@
 <a href="https://www.brianlinkletter.com/tag/Containerlab/">Containerlab</a>
 </li>
 <li>
-<a href="https://github.com/ipspace/netlab" target="_blank" rel="noopener noreferrer">NetLab</a>
+<a href="https://netlab.tools/" target="_blank" rel="noopener noreferrer">NetLab</a>
 </li>
 <li>
 <a href="https://github.com/openconfig/kne" target="_blank" rel="noopener noreferrer">OpenConfig-KNE</a>
@@ -54,7 +57,7 @@
 <a href="https://www.brianlinkletter.com/tag/vrnetlab/">vrnetlab</a>
 </li>
 <li>
-<a href="http://lnst-project.org/" target="_blank" rel="noopener noreferrer">Linux Network Test Stack</a>
+<a href="http://lnst-project.org/" target="_blank" rel="noopener noreferrer">Linux Network Stack Test</a>
 </li>
 </ul>
 
@@ -63,6 +66,9 @@
 <ul>
 <li>
 <a href="https://www.brianlinkletter.com/tag/mininet/">Mininet</a>
+</li>
+<li>
+<a href="https://containernet.github.io/">Containernet</a>
 </li>
 </ul>
 
@@ -73,7 +79,7 @@
 <a href="https://www.northeastern.edu/colosseum/" target="_blank" rel="noopener noreferrer">Colosseum</a>
 </li>
 <li>
-<a href="https://www.contiki-ng.org/" target="_blank" rel="noopener noreferrer">Cooja (Contiki)</a>
+<a href="https://docs.contiki-ng.org/en/develop/doc/tutorials/Running-Contiki-NG-in-Cooja.html" target="_blank" rel="noopener noreferrer">Cooja (Contiki)</a>
 </li>
 <li>
 <a href="https://github.com/roVer-HM/crownet" target="_blank" rel="noopener noreferrer">CrowNet</a>
@@ -85,7 +91,7 @@
 <a href="https://github.com/GUVWAF/Meshtasticator" target="_blank" rel="noopener noreferrer">Meshtasticator</a>
 </li>
 <li>
-<a href="https://gitlab.com/v-a/nemu" target="_blank" rel="noopener noreferrer">NEmu</a>
+<a href="https://gitlab.com/v-a/nemu/-/wikis/home" target="_blank" rel="noopener noreferrer">NEmu</a>
 </li>
 </ul>
 
@@ -101,10 +107,7 @@
 <li>
 <a href="https://www.brianlinkletter.com/tag/vnx/">VNX and VNUML</a>
 </li>
-
 </ul>
-
-
 
 # Network Demonstrators for High School Students
 
@@ -118,9 +121,6 @@
 <li>
 <a href="https://www.lernsoftware-filius.de/Herunterladen" target="_blank" rel="noopener noreferrer">Filius</a>
 </li>
-<li>
-<a href="https://github.com/lager1/psimulator2.5" target="_blank" rel="noopener noreferrer">Psimulator2.5</a>
-</li>
 </ul>
 
 # Tools
@@ -130,6 +130,6 @@
 <a href="https://www.brianlinkletter.com/tag/DevOps/">Do it yourself</a> using Linux tools and applications
 </li>
 <li>
-<a href="https://github.com/tinynetwork/tinet" target="_blank" rel="noopener noreferrer">TinyNet</a>
+<a href="https://github.com/tinynetwork/tinet" target="_blank" rel="noopener noreferrer">TiNet</a>
 </li>
 </ul>
