@@ -1,18 +1,21 @@
-Below are links to papers or articles that cite material published on [my blog](https://www.brianlinkletter.com). As of July 2023, one hundred ten academic papers or publications have cited content from my blog.
+Below are links to papers or articles that cite material published on [my blog](https://www.brianlinkletter.com). As of July 2025, one hundred twenty six academic papers or publications have cited content from my blog.
 
 Please [e-mail me if you cite one of my blog posts](mailto:mail@brianlinkletter.ca) in a research or industry publication. I will add a link to your paper or article on this page.
 
 I organized the headings on this page according to the blog post each paper cited. Where one paper cited multiple blog posts, I chose just one blog post heading to list the paper under so I avoid duplicating entries.
 
-
 ### Set up the Mininet network simulator
+
+**[A Comparative Study of Dynamic Resource Allocation Techniques in Cloud Computing: Load Balancing in Compute Power](https://erepository.uonbi.ac.ke/handle/11295/167470)**
+Ouma, Arnold O; University of Nairobi -- 2025
+This masters thesis aims to undertake a research experiment on two widely used cloud computing dynamic load balancing techniques, namely dynamic centralized load balancing and dynamic decentralized load balancing techniques, by comparing their performance in real-world applications.
 
 **[Study of SDN and NFV technologies](http://openaccess.uoc.edu/webapps/o2/bitstream/10609/45441/6/fibanezgarTFG0116memoria.pdf)**
 FJ Ibáñez García -- 2016;
 The technologies studied in this project (SDN and NFV) help to networks to these new needs by moving hardware networks closer to the software,simplifying and facilitating its evolution and management.
 
 **[The Application of Software-Defined Networking (SDN) and Network Virtualization (NV) to Wide-Band-Code Division Multiple Access (WCDMA)](http://www.academia.edu/download/45457143/project_report.docx)**
-TO Ale, SA Oyetunji;
+TO Ale, SA Oyetunji -- 2020;
 This project aims to apply SDN to a more general topology of the Wide-band Code Division Multiple Access (WCDMA) network. This is done virtually, by means of hypervisors, which help to create a session of topology-oriented arrangement of routers, switches.
 
 **[OpenDaylight as a Platform for Network Programmability](https://pc.nanog.org/static/published/meetings/NANOG72/1562/20180221_Eckel_Opendaylight_As_A_v1.pdf)**
@@ -41,8 +44,16 @@ Network simulation is the most useful and common methodology used to evaluate di
 SA Vanjari, *Networking and Communication Engineering* -- 2015;
 SDN promises to solve both cost of labor performing manual maintenance and administrative tasks in one single blow to the status quo. Traffic engineering problem for SDN controller is to route the traffic in such a way that the delay and packet loss at link are minimized.
 
+**[Ensuring consistency in distributed software-defined network control plane](https://dk.um.si/Dokument.php?id=131548&lang=eng)**	
+Simon Malek Kuzmič, University of Maribor -- 2018
+This master's thesis focuses on ensuring consistency in distributed software-defined networks with ONOS controllers operating in a cluster and the way of ensuring consistency of their information on the network topology in various scenarios in virtual networks created with the Mininet emulator.
 
 ### How to use MiniEdit, Mininet’s graphical user interface.
+
+**[Security for SDN environments with P4](https://estudogeral.uc.pt/retrieve/265757/SecurityforSDNenvironmentswithP4_RuiPires_10julho2023.pdf)**
+Rui Manuel Marques Pires, Centre for Informatics and Systems of the University of Coimbra (CISUC)
+This masters thesis investigates how P4-INT can act as security control, how it can be
+attacked, how it can be protected, and what needs to be considered when having the data plane take care of the security features.
 
 **[Enhanced SDN Security Using Firewall in Distributed Scenario](https://www.researchgate.net/publication/312965601_Enhanced_SDN_security_using_firewall_in_a_distributed_scenario)**
 H. Kumar, Gujarat Technological University -- 2016;
@@ -93,11 +104,10 @@ Lab procedures for SDN courses
 NG Sreejesh, MA Sabina, NV Sobhana, *International Journal for Research in Applied Science and Engineering Technology*, Volume 10, Issue 7, July 2022;
 This paper proposes a novel and simple method to detect and mitigate Denial of Service (DoS) attacks through a Heavy Packet-in Flow Mitigation feature.
 
-
 ### Mininet-WiFi: SDN emulator supports WiFi networks
 
 **[Experimenting  with  Resilience  and  Scalability  of Wifi Mininet on Small to Large SDN Networks](https://www.ijrte.org/wp-content/uploads/papers/v7i6s5/F10330476S519.pdf)**
-Ankit Kumar, Bhargavi Goswami,Peter Augustine, International Journal of Recent Technology and Engineering (IJRTE) -- 2019;
+Ankit Kumar, Bhargavi Goswami,Peter Augustine, _International Journal of Recent Technology and Engineering (IJRTE)_ -- 2019;
 Implement  WiFi support on an SDN and demonstrate the scalability and resilience of SDN-based WiFi   Networks on Mininet by testing performance parameters in various dynamic scenarios.
 
 **[SDN: The Readiness of Open Source Frameworks for Production Networking](https://www.researchgate.net/profile/Lisa_Patterson5/publication/326222339_SDN_The_Readiness_of_Open_Source_Frameworks_for_Production_Networking/links/5b3ebef14585150d23070c1f/SDN-The-Readiness-of-Open-Source-Frameworks-for-Production-Networking.pdf)** 
@@ -166,6 +176,33 @@ The aim of this undergraduate thesis is the extensive study of Software-Defined 
 
 ### Using the POX SDN controller
 
+**[Dynamic Load Management in Modern Grid Systems Using an Intelligent SDN-Based Framework](https://doi.org/10.3390/en18123001)**
+Khawaja Tahir Mehmood, Muhammad Majid Hussain, *Energies* 18, no. 12: 3001. -- 2025
+In this paper, the authors develop a co-simulation framework (PandaPower and Miniet) is designed to achieve maximum operational efficiency from the power grid with the prime objective of real-time intelligent load balancing of operational power devices, such as power transformers.
+
+**[Machine Learning Load Balancing Algorithms in SDN-enabled Massive IoT Networks](https://ieeexplore.ieee.org/abstract/document/10253834)**
+Harbin, A., Baldwin, K., Mhatre, J., Lee, A., & Lee, H., _2023 IEEE International Performance, Computing, and Communications Conference (IPCCC) (pp. 202-203)_ -- 2024
+To analyze the performance of machine learning algorithms over heuristic ones, the authors designed an experimental testbed using a POX SDN controller and Mininet. They also show results confirming that the machine learning-based algorithms are better in terms of packet loss and response time.
+
+**[Experimental Setup For Testing Of Software Defined Networks Controller](https://unitech.tugab.bg/images/2024/dokladi/4.COMPUTER_SYSTEMS_AND_TECHNOLOGIES/EXPERIMENTAL_SETUP_FOR_TESTING_OF_SOFTWARE_DEFINED_NETWORKS_CONTROLLER.pdf)**
+Tsvetan Raykov, Delyan Genkov, Miroslav Slavov, Technical University Bulgaria -- 2024
+There are plenty of free and commercial controllers. In this paper, the authors provide the results
+from simulation tests between networking devices and controllers.
+
+**[Exploring Routing and Quality of Service in Software-Defined Networks: Interactions with Legacy Systems and Flow Management](https://www.academia.edu/download/109659321/988-Article_Text-2714-1-10-20230803.pdf)**
+Daniel Alberto Priano, Fabio Sergio Bruschetti, María Claudia Abeledo, Javier Guevara; _Engineering and Technology Journal_ e-ISSN: 2456-3358, Volume 08 Issue 08 August 2023, Page No.- 2540-2555
+The following article presents the most important aspects of routing technologies and the QoS (Quality of Service) of the SDN architecture. The interaction of SDN with traditional or legacy networks is discussed in depth and concepts related to flow management are developed.
+
+**[Traffic Flow Control Algorithm in Software Defined Networking](https://d1wqtxts1xzle7.cloudfront.net/122320150/ijsrcsamsv7i4p35_paper_1_-libre.pdf?1744647723=&response-content-disposition=inline%3B+filename%3DTraffic_Flow_Control_Algorithm_in_Softwa.pdf&Expires=1752330301&Signature=IEo1srnj7nzNQY70wmPBvUuRkj~~mfh6bgKsfUxtSmgnYU2kiepnySLXLgEzpkrUVlVmpbHqrJSLKpEUGzKIXD~g71rSZV36YDdnAezEDVYGLYnafAnSaIyuZfnFz0-lb4LIkOSoI6C7XekODQkzXVXqLsb86cbOoszTUVUjFIIJKKT-ogQA9Al7k1esoAWDcmCd7YIkBKHfxu9jvupjSCMjvONujtp9fB6TrThZ6Gzua21BKbauvmsZGuxnXHKigTxjFOTQLE8cJ81g-BF0YTytlePVdUWGgopbGe9A3WVQnt1569ow0bEM4Zn4yF4sZb4NtqXiIihuWFy45TfC-A__&Key-Pair-Id=APKAJLOHF5GGSLRBV4ZA)**
+Jatin Sharma, Dr. Rajesh Kumar, Thapar Institute of Engineering and Technolog, _ISSN 2319 – 1953
+International Journal of Scientific Research in Computer Science Applications and Management Studies_ -- 2018
+Doctoral dissertation in which the author's proposed algorithm defines a limit of bytes of
+data travelled from multiple sources without any drop of packets so as to prevent the traffic on the link.
+
+**[Securing IoT Devices in Wireless Networks for Detection and Mitigation of MiTM and DDoS Attacks](https://www.ajsp.net/research/Securing%20IoT%20Devices%20in%20Wireless%20Networks%20for%20Detection%20and%20Mitigation%20of%20MiTM%20and%20DDoS%20Attacks_18.pdf)**
+Sara Al-Salouli, _Arab Journal for Scientific Publishing_ -- 2025
+This research aims to solve the security challenges faced by Internet of Things (IoT) devices in software-defined networking (SDN) environments, with a particular focus on mitigating man-in-the-middle and distributed denial-of-service (DDoS) attacks.
+
 **[Analysis of the use of SDN for load balancing](https://www.researchgate.net/publication/330668114_Analysis_of_the_use_of_SDN_for_load_balancing)**
 L. de Carvalho, University of Sao Paulo -- 2018;
 Analyze the use of SDN for load balancing by developing a balancer that can execute three different algorithms.
@@ -193,6 +230,10 @@ In this paper, we propose a novel SDN-Assisted Learning Approach (SALA) to provi
 **[Practical Training & Industrial Visit](https://www.researchgate.net/profile/Dinesh_Sharma44/publication/281979574_Training_Report_on_Software_Defined_Networking_taken_at_Florida_International_University_Florida_USA/links/5600a8c708ae07629e52b042.pdf)**
 DK Sharma -- 2016;
 This training provides opportunity to be familiar with the industrial / company environment. During this training we can show and enhance our practical skills and gain practical knowledge. This is best way through which the we can learn the latest technologies being used in the industries.
+
+**[Strengthening SDN Security: Addressing Vulnerabilities with Machine Learning](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5047458)**
+John Akkarakaran Jose, Sunil Pradhan Sharma, Capital One Financial, USA -- 2024
+This papre discusses a method of leveraging Machine Learning (ML) to identify threats and implementing regular network updates and patches that can strengthen SDN defenses.
 
 **[Software Defined Networks, An Initial Approach to Concept and Practice](http://bd.centro.iff.edu.br/handle/123456789/1934)**
 João Paulo Seixas Alves e Silva, Patrick Ribeiro Faria, Federal Institute of Education, Science and Technology Fluminense, Brazil -- 2017;
@@ -342,6 +383,10 @@ This Masters thesis aims at presenting SDN technology and then developing an SDN
 Sabih Khan, Saleem Iqbal, Kashif Naseer Qureshi, Kayhan Zrar Ghafoor, Pyoungwon Kim, Gwanggil Jeon, *Computer Communications*, Volume 175, 1 July 2021, Pages 177-185;
 In this paper, the SDN based Heterogeneous Inter-Domain Handoff system for IoT (SDN-HIIoT) is proposed that enables SDN-Controller to exchange flow rules by using the East/West application programming interface.
 
+**[Quantizing Radio Link Data Rates to Create Ever-Changing Network Conditions in Tactical Networks](https://ieeexplore.ieee.org/abstract/document/9210071)**
+Roberto Rigolin F. Lopes, Johannes Loevenich, Paulo H. L. Rettore, Sharath Maligera Eswarappa, Peter Sevenich, _IEEE Access (Volume: 8)_ -- 2020
+This paper's goal is to quantify how much variation in the link data rate a tactical system can handle and how long it takes to resume IP data-flows after link disconnections.
+
 **[Centralized Firewall for Software-Defined Networking (SDN)](https://www.academia.edu/download/64562451/IRJET-V7I5371.pdf)**
 Sheetal Khodbhaya, Nimit Tiwari2, Sachin Mahto, Jishnu Unnikrishnan, Prof. K.S. Charumathi, Pillai College of Engineering, Maharashtra, India -- 2020;
 We propose to implement a centralized firewall for SDN which will get the network details from the SDN Controller, analyze it, and will push the rules to the SDN controller using RESTful APIs.
@@ -418,6 +463,9 @@ Martinez - Lab notes for CS 585/ECE 440 courses at University of New Mexico
 D. Terefenko, Dublin Institute of Technology -- 2018;
 Masters Thesis comparing the effectiveness of MPLS and OpenFlow protocols in computer networks usind Linux software routers.
 
+**[The Use of Local Passive DNS in the Intranet to Detect the Incident Caused by Insider](https://udspace.udel.edu/server/api/core/bitstreams/efc94f43-2f33-4e48-87fe-8a4f23c0f385/content)**
+Youngmin Wang, University of Delaware -- 2019
+In this Masters thesis, the author conducts an experiment with a passive DNS tool, local passive DNS that can be utilized in the Intranet as an alternative by collecting DNS queries to track malicious domains in the local network.
 
 ### Control an Amazon EC2 server from an Apple iPad using SSH and VNC ###
 
@@ -432,6 +480,14 @@ Ilias C. Konidis, Department of Computer Engineering and Informatics, University
 PhD Thesis, written in Greek.
 
 ### OFNet SDN network emulator ###
+
+**[Benchmarking SDN Controllers](https://doi.org/10.14201/adcaij.31674)**
+Inês Alexandra Barbosa Fonseca, University of Coimbra -- 2024
+Masters dissertation proposes a benchmarking methodology that enables a fair and systematic comparison of SDN controllers under unexpected usages or situations. 
+
+**[Performance Analysis of Software-Defined Networking in Band Controllers for Different Network Topologies](https://revistas.usal.es/cinco/index.php/2255-2863/article/view/31674)**
+Hussein Ali Al-Gubouri, _ADCAIJ: Advances in Distributed Computing and Artificial Intelligence Journal, 13(1), e31674_ -- 2024
+In  this paper, several SDN controllers have been evaluated using in-band communication mode with different network topologies to check the performance of the in-band  controllers. 
 
 **[Guidelines for the Deployment of SDN / OpenFlow Networks](http://concisa.net.ve/memorias/CoNCISa2017/CoNCISa2017-p060-072.pdf)**
 Gustavo Pereira, Eric Gamess, Fifth National Conference on Computing, Computing and Systems (CoNCISa) -- 2017
@@ -464,6 +520,10 @@ This thesis work was based on proposing to integrate the GNS3 simulator as a mod
 
 ### Use Containerlab to emulate open-source routers ###
 
+**[Routing Technology Based On Virtualization Software-Defined Networking Concept](https://ceur-ws.org/Vol-3806/S_38_Starkova.pdf)**
+Yurii Kravchenko1, Kostiantyn Herasymenko1, Olena Starkova1 and Anna Bulgakova, Taras Shevchenko National University of Kyiv -- 2024
+This paper identificaties opportunities for the implementation of virtualization of network functions in the context of SDN and NFV concepts.
+
 **[Network device emulation method for implementation of network functions](https://ieeexplore.ieee.org/abstract/document/9678587)**
 Olena Starkova, Kostiantyn Herasymenko, Kyryl Nikolchev, Yurii Ahafonov, Viktoriia Ivannikova,  Taras Shevchenko National University of Kyiv -- 2021;
 This work is devoted to creating a network device emulation method for testing self-created network protocols (particularly routing protocols).
@@ -473,7 +533,7 @@ Kyryl Nikolchev, Yurii Ahafonov, Olena Starkova and Kostiantyn Herasymenko, Tara
 The article discusses the existing routing methods, their advantages and disadvantages. It was discovered that to solve the routing methods disadvantages it is necessary to use the concept of Network Functions Virtualization (ETSI ISG NFV).
 
 **[Implementation of Advanced Routing Methods Based on the SDN Concept and OS Linux](https://ieeexplore.ieee.org/abstract/document/10024243)**
-Olena Starkova, Kyryl Nikolchev, Olga Kravchenko, Kostiantyn Herasymenko, Anna Bulgakova, Taras Shevchenko National University of Kyiv -- 2022;
+Olena Starkova, Kyryl Nikolchev, Olga Kravchenko, Kostiantyn Herasymenko, Anna Bulgakova, Taras Shevchenko National University of Kyiv, _2022 IEEE 4th International Conference on Advanced Trends in Information Theory (ATIT)_ -- 2022
 This work is devoted to the development of advanced routing methods based on the SDN concept and OS Linux.
 
 ### Using Wireshark in GNS: Capturing data on open source router interfaces ###
