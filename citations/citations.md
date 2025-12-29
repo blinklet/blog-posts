@@ -303,6 +303,10 @@ The objective of this research is to identify the contributions of a simulation 
 
 ### Open-Source Network Simulators
 
+**[Optimising Resource Allocation for Computational Offloading in a Mobile Edge Environment](https://bura.brunel.ac.uk/bitstream/2438/30163/1/FulltextThesis.pdf#:~:text=Available%3A%20http%3A%2F%2Fwww.brianlinkletter.com%2Fopen,and%20Mobile%20Edge%20Computing%2C%20FMEC)**  
+Sarfraz Hussain, PhD Thesis, Brunel University London -- 2024  
+This thesis involves testing and validating various network simulation software to identify the most effective tools for simulating MEC environments. Then, it implements a single-layer reinforcement learning (RL) algorithm within the orchestration module of the simulator to optimize network resource allocation.
+
 **[Virtual Industrial Control System Testbed](https://www.researchgate.net/publication/300334813_A_Survey_of_Industrial_Control_System_Testbeds)**  
 Hannes Holm, et al, Swedish Defence Research Agency -- 2015;  
 Surveys industrial control systems testbeds that have been proposed for scientific research with a focus on components considered particularly challenging to implement in testbeds.
