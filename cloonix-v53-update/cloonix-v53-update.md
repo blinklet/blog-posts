@@ -1,14 +1,16 @@
 % Cloonix Network Emulator Updated to Version 53
 
-The [Cloonix network emulator](http://clownix.net/) has evolved significantly since I [last wrote about it](https://brianlinkletter.com/tag/cloonix/) in 2017. Since then, the Cloonix developer introduced major new features including container support, a rootless installation option, experimental support for WiFi emulation, and a simplified user experience. In this post, I will review Cloonix v53 and walk through some hands-on exercises with the new features.
+Cloonix v53 introduces container support, a rootless installation option, experimental support for WiFi emulation, and a simplified user experience. 
 
 ![](./Images/00-splash.png)
+
+In this post, I will review Cloonix v53 and walk through some hands-on exercises with the new features.
 
 <!--more-->
 
 ## What's New in Cloonix v53
 
-I last wrote about Cloonix when it was at [version 37](https://brianlinkletter.com/2017/12/install-and-run-the-cloonix-network-emulator-on-packet-net/). Since then, the Cloonix developer has updated the software regularly, so this blog post covers a lot of changes.
+The [Cloonix network emulator](http://clownix.net/) has evolved significantly since I [last wrote about it](https://brianlinkletter.com/tag/cloonix/) in 2017.
 
 I list the major changes, since I last looked at Cloonix, below:
 
@@ -30,7 +32,7 @@ In this post, I cover the full installation. I'll cover the rootless "cloonix-to
 
 ### WiFi Emulation
 
-Cloonix v53 adds WiFi emulation support on qemu-kvm Virtual machines using [vwifi](https://github.com/Raizo62/vwifi). This allows you to create wireless network scenarios in Cloonix. WiFi emulation is an experimental feature in Cloonix v53.
+Cloonix v53 adds WiFi emulation support on qemu-kvm virtual machines using [vwifi](https://github.com/Raizo62/vwifi). This allows you to create wireless network scenarios in Cloonix. WiFi emulation is an experimental feature in Cloonix v53.
 
 ### Web Interface
 
@@ -121,9 +123,9 @@ $ rm trixie.tar.gz
 Cloonix filesystems are based on standard Linux distributions, with _[qemu-guest-agent](https://wiki.qemu.org/Features/GuestAgent)_ and _cloonix-agent_ pre-installed.
 
 
-### Fix apparmor settings (Ubuntu)
+### Fix AppArmor settings (Ubuntu)
 
-I run Ubuntu 24.04 and ran into an [apparmor problem with Cloonix](https://clownix.net/doc_stored/build-53/html/doc/system.html#qemu-guest-agent) because Ubuntu restricts unprivileged user namespaces by default.
+I run Ubuntu 24.04 and ran into an [AppArmor problem with Cloonix](https://clownix.net/doc_stored/build-53/html/doc/system.html#qemu-guest-agent) because Ubuntu restricts unprivileged user namespaces by default.
 
 To see if you have the same problem, just run the help command:
 
@@ -131,9 +133,9 @@ To see if you have the same problem, just run the help command:
 $ cloonix_cli nemo help
 ```
 
-You should see a help screen that displays a list of Cloonix commands. If nothing happens, you probably have a problem with apparmor and Cloonix.
+You should see a help screen that displays a list of Cloonix commands. If nothing happens, you probably have a problem with AppArmor and Cloonix.
 
-To verify if apparmor is a problem, check the kernel ring buffer for "denied" appaarmor operations:
+To verify if AppArmor is a problem, check the kernel ring buffer for "denied" appaarmor operations:
 
 ```bash
 $ sudo dmesg | grep -i denied
@@ -155,7 +157,7 @@ $ sudo nano /etc/sysctl.conf
 
 Add the following two lines to the end of the file:
 
-```
+```text
 kernel.unprivileged_userns_clone=1
 kernel.apparmor_restrict_unprivileged_userns=0
 ```
@@ -319,7 +321,7 @@ Now you should see all three nodes connected to the same LAN:
 
 Double-click on the container to open a shell, or run the following command in your terminal app:
 
-```
+```bash
 $ cloonix_ssh nemo Cnt1
 ```
 
@@ -392,9 +394,11 @@ Let's connect our network to the Internet using Cloonix's NAT component.
 
 ### Troubleshooting NAT problems
 
-I could not connect to the Internet from a Cllonix VM using NAT. The Cloonix developer configured the NAT device to default to using the `172.17.0.0/24` address space. However, this conflicts with the address space `172.17.0.0/16` used by the Docker daemon, if you have Docker installed.
+If you already have Docker installed on your Linux PC, it might cause problems with the Cloonix NAT interface.
 
-I have Docker installed so I changed the default network space used by Docker to `172.30.0.0/16` and restarted my computer. (Spoiler alert: I still could not get the NAT object to work as expected, but that's another problem)
+The Cloonix developer configured the NAT device to default to using the `172.17.0.0/24` address space. However, this conflicts with the address space `172.17.0.0/16` used by the Docker daemon, if you have Docker installed.
+
+I have Docker installed so I changed the default network space used by Docker to `172.30.0.0/16` and restarted my computer.
 
 #### Docker address space
 
@@ -407,7 +411,7 @@ $ sudo systemctl stop docker.socket
 $ sudo systemctl stop docker
 ```
 
-Next create or edit Docker's _daemion.json_ config file:
+Next create or edit Docker's _daemon.json_ config file:
 
 ```bash
 $ sudo nano /etc/docker/daemon.json
@@ -475,7 +479,7 @@ Save the file, then bring up the interface:
 VM1# ifup eth0
 ```
 
-The VM _VM1_ should successfully connect with the DHCP server running on teh NAT and request an IP address. In my case, it was assigned the IP address, `172.17.0.10/24`.
+The VM _VM1_ should successfully connect with the DHCP server running on the NAT and request an IP address. In my case, it was assigned the IP address, `172.17.0.10/24`.
 
 ### Test Internet Connectivity
 
@@ -499,7 +503,7 @@ VM1# nano /etc/apt/sources.list
 
 Delete the line that already exists in the file and add in the following line:
 
-```
+```text
 deb http://deb.debian.org/debian trixie main contrib non-free
 ```
 
@@ -518,7 +522,7 @@ VM1# apt install curl
 
 Now, you can use _curl_ to test other Internet connectivity, like downloading a web page:
 
-```
+```text
 VM1# curl https://www.example.com
 <!doctype html><html lang="en"><head><title>Example Domain</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{background:#eee;width:60vw;margin:15vh auto;font-family:system-ui,sans-serif}h1{font-size:1.5em}div{opacity:0.8}a:link,a:visited{color:#348}</style><body><div><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission. Avoid use in operations.<p><a href="https://iana.org/domains/example">Learn more</a></div></body></html>
 ```
@@ -542,7 +546,7 @@ Cnt1# vi /etc/resolv.conf
 
 Replace the nameserver with:
 
-```
+```txt
 nameserver 172.17.0.3
 ```
 
@@ -556,7 +560,7 @@ Cvm2# vi /etc/apt/sources.list
 
 Delete the existing line, and replace it with:
 
-```
+```txt
 deb http://deb.debian.org/debian trixie main contrib non-free
 ```
 
