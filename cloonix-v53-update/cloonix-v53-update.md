@@ -166,7 +166,7 @@ Save the file. Then, apply the changes:
 $ sudo sysctl -p
 ```
 
-> **Note:** These settings reduce some security restrictions on your system. Unprivileged user namespaces can potentially be exploited in container escape or privilege escalation attacks. If you're running Cloonix on a dedicated lab machine or VM, the security trade-off is usually acceptable.
+These settings reduce some security restrictions on your system. Unprivileged user namespaces can potentially be exploited in container escape or privilege escalation attacks. If you're running Cloonix on a dedicated lab machine or VM, the security trade-off may be acceptable.
 
 
 ## Your First Cloonix v53 Network
@@ -485,11 +485,7 @@ Try to ping an external host:
 VM# ping -c 3 google.com
 ```
 
-If your host has Internet connectivity, the ping should succeed. In my case, pings failed but I still had Internet connectivity. 
-
-It seems Cloonix did not configure the NAT object on the host properly. In addition, the NAT object seems to be corrupting ICMP packets.
-
-But, there really is a connection to the Internet. So, NAT works but pinging the NAT interface at `172.17.0.2` will not work, and checking the packets on the _eth1_ interface shows that ICMP replies from `172.17.0.2` have invalid checksums.
+If your host has Internet connectivity, the ping should succeed. In my case, pings failed but I still had Internet connectivity. The NAT object seems to be corrupting ICMP packets. Pinging the NAT interface at `172.17.0.2` will not work, and using Wireshark to check the packets on the _eth1_ interface shows that the ICMP replies from `172.17.0.2` have invalid checksums.
 
 This is a minor issue, because the actual functionality that we need still works. I can download repository info from the Internet and, after installing it, I can use _curl_ to get web page information from the Internet.
 
@@ -525,6 +521,43 @@ Now, you can use _curl_ to test other Internet connectivity, like downloading a 
 ```
 VM1# curl https://www.example.com
 <!doctype html><html lang="en"><head><title>Example Domain</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{background:#eee;width:60vw;margin:15vh auto;font-family:system-ui,sans-serif}h1{font-size:1.5em}div{opacity:0.8}a:link,a:visited{color:#348}</style><body><div><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission. Avoid use in operations.<p><a href="https://iana.org/domains/example">Learn more</a></div></body></html>
+```
+
+### Configuring containers to connect to NAT
+
+Containers can be connected to the NAT object, the same as VMs. However, in Cloonix v53, both the _cvm_ and _zip_ versions of the Trixie filesystem are designed to be extremely minimal. They do not support DHCP. 
+
+Manually set up an IP address and default route:
+
+```txt
+Cnt1# ip addr add 172.17.0.50/24 dev eth0
+Cnt1# ip route add default via 172.17.0.2 dev eth0
+```
+
+Then, configure the nameserver. Edit the _/etc/resolv.conf_ file:
+
+```txt
+Cnt1# vi /etc/resolv.conf
+```
+
+Replace the nameserver with:
+
+```
+nameserver 172.17.0.3
+```
+
+Save the file. 
+
+It is not possible to install packages on the _zip_-type containers. But, if you use the _cvm_-type containers, you can install packages. To enable the apt repository, edit the _/etc/apt/sources.list_ file:
+
+```txt
+Cvm2# vi /etc/apt/sources.list
+```
+
+Delete the existing line, and replace it with:
+
+```
+deb http://deb.debian.org/debian trixie main contrib non-free
 ```
 
 ## Using the Command-Line Interface
@@ -575,11 +608,11 @@ $ ./ping_demo.sh
 
 ## Conclusion
 
-Cloonix v53 represents a major evolution of the Cloonix network emulator, compared to the last time I looked at it, eight years ago. The addition of container support, rootless operation, and WiFi emulation significantly expands its capabilities. The simplified installation process and improved user interface make it more accessible than ever.
+Cloonix v53 represents the continued evolution of the Cloonix network emulator. The addition of container support and WiFi emulation show the potential to significantly expands its capabilities, as these features are improved in future releases. The simplified installation process and improved user interface make Cloonix more accessible than ever.
 
-Cloonix continues to be active developed. The Cloonix team continues to make it a valuable tool in the network emulation landscape.
+Cloonix is actively developed and it continues to be a valuable tool in the network emulation landscape.
 
-## Resources
+## Links
 
 - [Cloonix Website](http://clownix.net/)
 - [Cloonix Documentation (v53)](https://clownix.net/doc_stored/build-53/singlehtml/index.html)
