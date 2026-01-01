@@ -1,58 +1,44 @@
 % Cloonix Network Emulator Updated to Version 53
 
-The [Cloonix network emulator](http://clownix.net/) has evolved significantly since I [last wrote about it](https://brianlinkletter.com/tag/cloonix/) in 2016. Since then, the Cloonix developer introduced major new features including container support, a rootless installation option, WiFi emulation, and a simplified user experience. In this post, I will review Cloonix v53 and walk through some hands-on exercises with the new features.
+The [Cloonix network emulator](http://clownix.net/) has evolved significantly since I [last wrote about it](https://brianlinkletter.com/tag/cloonix/) in 2017. Since then, the Cloonix developer introduced major new features including container support, a rootless installation option, experimental support for WiFi emulation, and a simplified user experience. In this post, I will review Cloonix v53 and walk through some hands-on exercises with the new features.
+
+![](./Images/00-splash.png)
 
 <!--more-->
 
 ## What's New in Cloonix v53
 
-I last wrote about Cloonix when it was at [version 33](https://brianlinkletter.com/2016/12/dns-and-bind-demonstration-using-the-cloonix-network-emulator/). Since then, the Cloonix developer has updated the software regularly, so this blog post covers a lot of changes.
+I last wrote about Cloonix when it was at [version 37](https://brianlinkletter.com/2017/12/install-and-run-the-cloonix-network-emulator-on-packet-net/). Since then, the Cloonix developer has updated the software regularly, so this blog post covers a lot of changes.
 
 I list the major changes, since I last looked at Cloonix, below:
 
 ### Container Support
 
-One of the most significant additions is native container support, using [crun](https://github.com/containers/crun).
+One of the most significant additions is native container support, using [crun](https://github.com/containers/crun). Cloonix feature support for containers is, however, limited. For example, one cannot save a container's filesystem and containers do not support Spice connections so they can't run a desktop environment.
 
-Containers start faster and use fewer resources than KVM virtual machines, making them ideal for scenarios where you need many lightweight nodes. 
+Cloonix containers start faster and use fewer resources than KVM virtual machines, or even Docker containers, making them ideal for scenarios where you need many lightweight nodes. I imagine containers in Cloonix will be used to create many clients in a simulation scenario.
 
 Cloonix continues to support virtual machines using qemu-kvm, and you can mix containers and KVM VMs in the same Cloonix topology.
 
 ### Rootless Installation Option
 
-Cloonix v53 introduces a "cloonix-toy" installation that runs entirely in user space without requiring root privileges. This is particularly useful for:
+Cloonix v53 introduces a "cloonix-toy" installation that runs entirely in user space without requiring root privileges. This is particularly useful for quick evaluations without modifying the host system or for using Cloonix on systems where you don't have administrator access.
 
-- Quick evaluations without modifying the host system
-- Testing Cloonix on systems where you don't have administrator access
-- Running Cloonix in environments with strict security policies
-
-The rootless version uses a container to isolate Cloonix from the host system while still providing full functionality. 
+The rootless "cloonix-toy" version uses a container to isolate Cloonix from the host system while still providing full functionality. 
 
 In this post, I cover the full installation. I'll cover the rootless "cloonix-toy" version in a future post.
 
 ### WiFi Emulation
 
-Version 53 adds WiFi emulation support on qemu-kvm Virtual machines using [vwifi](https://github.com/Raizo62/vwifi). This allows you to create wireless network scenarios in Cloonix.
+Cloonix v53 adds WiFi emulation support on qemu-kvm Virtual machines using [vwifi](https://github.com/Raizo62/vwifi). This allows you to create wireless network scenarios in Cloonix. WiFi emulation is an experimental feature in Cloonix v53.
 
 ### Web Interface
 
 Cloonix now includes a web interface built with [noVNC](https://github.com/novnc/noVNC) that allows you to access the Cloonix GUI from a web browser. This is useful for remote access or when running Cloonix on a headless server.
 
-### Improved NAT and Networking
-
-The NAT component has been improved to support:
-
-- DHCP server (assigns addresses in the 172.17.0.x range)
-- DNS forwarding (reads `/etc/resolv.conf` from the host)
-- Gateway functionality through 172.17.0.2
-
-### Cisco and Commercial Router Support
-
-Cloonix v53 includes improved support for Cisco IOS-XE images (c8000v) and other commercial routers. Special commands (`cloonix_osh` and `cloonix_ocp`) provide SSH-like access for devices that cannot run the qemu-guest-agent.
-
 ## Installing Cloonix
 
-Before installing Cloonix, whether you install the normal version or the "toy" version, ensure your system meets these requirements. The following procedures were testsed on my laptop running Ubuntu 24.04:
+Before installing Cloonix, ensure your system meets the requirements. The following procedures were tested on my laptop running Ubuntu 24.04:
 
 ### Hardware Virtualization
 
@@ -62,7 +48,7 @@ Cloonix uses KVM for virtual machines. Check that your CPU supports hardware vir
 $ egrep -c '(vmx|svm)' /proc/cpuinfo
 ```
 
-If the result is greater than zero, your CPU supports virtualization. You may need to enable it in your BIOS settings.
+If the result is greater than zero, your CPU supports virtualization. If not, you may need to enable it in your BIOS settings.
 
 ### Install virtualization tools
 
@@ -77,33 +63,11 @@ $ sudo apt install -y qemu-kvm \
                       virt-manager
 ```
 
-### vhost_net kernel module
-
-Cloonix VMs rely on the _vhost_net_ kernel module, which is not enabled by default in Ubuntu 24.04. Enable the kernel module with the command:
-
-```bash
-$ sudo modprobe vhost_net
-```
-
-### KVM Access
-
-Ensure you have access to the KVM device:
-
-```bash
-$ ls -la /dev/kvm
-```
-
-If you don't have access, add your user to the `kvm` group:
-
-```bash
-$ sudo usermod -a -G kvm $USER
-```
-
-Then **log out and log back in** for the group change to take effect.
+Installing the virtualization tools should also set up your PC to support the virtualization features required by Cloonix. If virtualization is not enabled, read the Cloonix documentation to see the steps required to [enable virtualization for your Linux PC](https://clownix.net/doc_stored/build-53/singlehtml/index.html#host-system-required-customisation).
 
 ### Install the _mac80211_hwsim_ kernel module
 
-Check that the _mac80211_hwsim_ kernel module is installed:
+The _mac80211_hwsim_ is used in WiFi simulation scenarios. Check that the _mac80211_hwsim_ kernel module is installed:
 
 ```bash
 $ lsmod | grep mac80211_hwsim
@@ -128,17 +92,19 @@ $ cd cloonix-bundle-53
 $ sudo ./install_cloonfs
 ```
 
-This installs Cloonix to:
+This installs Cloonix to the following directories:
 
-- `/usr/bin/cloonix_*` — Client scripts
-- `/usr/libexec/cloonix/cloonfs` — Binaries and libraries
-- `/var/lib/cloonix/bulk` — Storage for VM images
+* `/usr/bin/cloonix_*` — User interface scripts
+* `/usr/libexec/cloonix` — Binaries and libraries
+* `/var/lib/cloonix` — Storage for VM images
+
+Removing Cloonix from your system is easy; you just delete the directories that the Cloonix install script created. See the Cloonix documentation for more details about [uninstalling Cloonix](https://clownix.net/doc_stored/build-53/singlehtml/index.html#howto-erase-cloonix-from-host). 
 
 ### Guest filesystems
 
 Before you can use Cloonix, you need to have filesystems installed in the _/var/lib/cloonix/bulk_ directory.
 
-Download some guest filesystem images in KVM and container formats. Cloonix offers different systems in their website's [downloads page for Cloonix v53](https://clownix.net/downloads/cloonix-53/bulk/). I chose to use the images based on Debian 13 "Trixie".
+Download guest filesystem images in KVM and container formats. Cloonix offers different systems in their website's [downloads page for Cloonix v53](https://clownix.net/downloads/cloonix-53/bulk/). I chose to use the images based on Debian 13 "Trixie".
 
 ```bash
 $ cd /var/lib/cloonix/bulk
@@ -154,27 +120,10 @@ $ rm trixie.tar.gz
 
 Cloonix filesystems are based on standard Linux distributions, with _[qemu-guest-agent](https://wiki.qemu.org/Features/GuestAgent)_ and _cloonix-agent_ pre-installed.
 
-### Get the demo scripts
-
-While we're downloading files, let's get the demo scripts so we can use them to play with Cloonix:
-
-```bash
-$ cd
-$ cd cloonix-bundle-53
-$ mkdir demos
-$ cd demos
-$ wget https://clownix.net/downloads/cloonix-53/demos/eth_cvm.sh
-$ wget https://clownix.net/downloads/cloonix-53/demos/eth_kvm.sh
-$ wget https://clownix.net/downloads/cloonix-53/demos/eth_zip.sh
-$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_cvm.sh
-$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_kvm.sh
-$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_zip.sh
-$ chmod +x *
-```
 
 ### Fix apparmor settings (Ubuntu)
 
-I run Ubuntu 24.04 and ran into an [apparmor problem with Cloonix](https://clownix.net/doc_stored/build-53/html/doc/system.html#qemu-guest-agent). This is because Ubuntu restricts unprivileged user namespaces by default.
+I run Ubuntu 24.04 and ran into an [apparmor problem with Cloonix](https://clownix.net/doc_stored/build-53/html/doc/system.html#qemu-guest-agent) because Ubuntu restricts unprivileged user namespaces by default.
 
 To see if you have the same problem, just run the help command:
 
@@ -220,7 +169,7 @@ $ sudo sysctl -p
 > **Note:** These settings reduce some security restrictions on your system. Unprivileged user namespaces can potentially be exploited in container escape or privilege escalation attacks. If you're running Cloonix on a dedicated lab machine or VM, the security trade-off is usually acceptable.
 
 
-## Exercise 1: Your First Cloonix Network
+## Your First Cloonix v53 Network
 
 To test that the basics of Cloonix are working, let's create a simple network with two virtual machines connected by a LAN.
 
@@ -232,7 +181,7 @@ Start the Cloonix server and GUI:
 $ cloonix_net nemo
 ```
 
-Remember, you always have to start the Cloonix server before anything else. The "nemo" tag is the name of the Cloonix server. The Cloonix server parameters were defined in the [Cloonix configuration file](https://clownix.net/doc_stored/build-53/singlehtml/index.html#cloonix-configuration).
+Remember, you always have to start the Cloonix server before anything else. The "nemo" tag is the name of the Cloonix server. The Cloonix server names and parameters were defined in the [Cloonix configuration file](https://clownix.net/doc_stored/build-53/singlehtml/index.html#cloonix-configuration), which is installed in your system in the file _/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg_.
 
 Then, you can start the Cloonix GUI or issue Cloonix CLI commands. In this exercise, let's start the GUI:
 
@@ -244,7 +193,7 @@ If you see an error message stating that something _Failed to load module "canbe
 
 ### Create Virtual Machines
 
-Before creating VMs, configure the VM settings by right-clicking and selecting *kvm_conf*. 
+Before creating VMs, configure the VM settings by right-clicking and selecting *kvm_config*. 
 
 ![](./Images/01-KVM-config1.png)
 
@@ -275,7 +224,7 @@ A new VM will appear on the canvas. Repeat the process again to create a second 
 
 ### Create a LAN
 
-Right-click on the canvas and select **lan** to create a LAN. 
+Right-click on the canvas and select _lan_ to create a LAN. 
 
 ![](./Images/03-KVM-lan.png)
 
@@ -327,7 +276,7 @@ You can close both terminal windows by typing `exit` in each.
 
 ### SSH to VMs
 
-The terminal windows that open up when you double-click the VM lack some terminal features like copy-and-paste via keyboard shortcuts. Even though we are using the GUI, we can still run Cloonix CLI commands to SSH into any node running on a Cloonix server.
+The terminal windows that open up when you double-click the VM lack some terminal features, like copy-and-paste via keyboard shortcuts. For a better user experience, I suggest that you run Cloonix CLI commands to SSH into any node running on a Cloonix server.
 
 For example, in my PC's terminal application, I can type the Cloonix CLI command to SSH into _VM2_:
 
@@ -335,17 +284,11 @@ For example, in my PC's terminal application, I can type the Cloonix CLI command
 $ cloonix_ssh nemo VM2
 ```
 
-This enables me to interact with _VM2_ in my favorite terminal application.
+This enables me to interact with _VM2_ in my PC's terminal application.
 
-## Exercise 2: Using Containers in Cloonix
+## Using Containers in Cloonix
 
-Cloonix now offers the ability to create nodes based on containers. Container support is one of the key new features in Cloonix v53. Cloonix feature support for containers is, however, limited. For example, one cannot save a container's filesystem.
-
-Containers start faster and use fewer resources than KVM VMs. I imagine containers could be used to build a small army of client systems in a siumulation scenario.  
-
-Let's add a container to our network.
-
-### Configure and create a Container
+To create a Cloonix node based on a container, you must first choose which container type you will use. The "zip" containers are very lightweight but, currently, do not have the option to install packages or save a persistent filesystem. The "cvm" containers are a bit heavier weight, but still lighter and faster than Docker containers, and they allow packages to be installed. In this example, I chose to use the "zip" container type.
 
 Right-click on the Cloonix GUI canvas and click on the _zip_ radio button to activate the container options for crun zip containers. Then, select _zip config_ to configure the next container.
 
@@ -359,7 +302,7 @@ Then, select the _trixie.zip_ file system to create your container.
 
 ![](./Images/11-Container-create.png)
 
-Now you have added a node based on a container to your topology! Cloonix shows you it's a container by rendering it as a smaller circle on the canvas.
+Now you have added a node based on a container to your topology. Cloonix shows you it's a container by rendering it as a smaller circle on the canvas.
 
 ### Connect the Container
 
@@ -409,7 +352,7 @@ Cnt1#
 
 Exit the SSH session with the `exit` command.
 
-## Exercise 3: Using Wireshark to Capture Traffic
+## Using Wireshark to Capture Traffic
 
 Cloonix includes a customized version of Wireshark for packet capture and analysis.
 
@@ -439,7 +382,7 @@ First, stop the capture. In Wireshark's menu, go to _Capture_ --> _Stop_. Then, 
 Go to _File_ --> _Save As_ and choose a location.
 
 
-## Exercise 4: Adding Internet Access with NAT
+## Adding Internet Access with NAT
 
 Cloonix provides a variety of filesystems for use in the Cloonix network simulator. In version 53, these root filesystem only have the most basic software packages installed and will not support advanced network configuration.
 
@@ -515,7 +458,7 @@ On _VM1_, configure the interface connected to the NAT and request an IP address
 
 Create a file named after the interface, e.g.:
 
-```bash
+```text
 VM1# nano /etc/network/interfaces.d/eth0
 ```
 
@@ -528,7 +471,7 @@ iface eth0 inet dhcp
 
 Save the file, then bring up the interface:
 
-```bash
+```text
 VM1# ifup eth0
 ```
 
@@ -538,13 +481,13 @@ The VM _VM1_ should successfully connect with the DHCP server running on teh NAT
 
 Try to ping an external host:
 
-```bash
+```text
 VM# ping -c 3 google.com
 ```
 
-If your host has Internet connectivity, the ping should succeed.
+If your host has Internet connectivity, the ping should succeed. In my case, pings failed but I still had Internet connectivity. 
 
-In my case, it failed. It seems Cloonix did not configure the NAT object on the host properly. In addition, the NAT object seems to be corrupting ICMP packets.
+It seems Cloonix did not configure the NAT object on the host properly. In addition, the NAT object seems to be corrupting ICMP packets.
 
 But, there really is a connection to the Internet. So, NAT works but pinging the NAT interface at `172.17.0.2` will not work, and checking the packets on the _eth1_ interface shows that ICMP replies from `172.17.0.2` have invalid checksums.
 
@@ -554,7 +497,7 @@ This is a minor issue, because the actual functionality that we need still works
 
 I tried running the _apt_ command to update the repository information but the Trixie root file system that comes with Cloonix has only a local mirror configured and, since I am not running a local Debian mirror, it does not work. I had to edit the _/etc/apt/sources.list_ file and add in the Debian repos.
 
-```bash
+```txt
 VM1# nano /etc/apt/sources.list
 ```
 
@@ -566,14 +509,14 @@ deb http://deb.debian.org/debian trixie main contrib non-free
 
 Save the file, then update the repository:
 
-```bash
+```txt
 VM1# apt clean
 VM1# apt update
 ```
 
 Install _curl_ on the VM _VM1_:
 
-```bash
+```text
 VM1# apt install curl
 ```
 
@@ -604,9 +547,28 @@ This terminates all VMs, containers, and cleans up resources.
 
 Cloonix includes demo scripts that create pre-configured network scenarios.
 
-Demo scripts are included in the bundle directory:
+Demo scripts are available on the Cloonix web site. They make good examples of how to build a script that creates a customized simulation scenario.
+
+Let's get the demo scripts so we can use them to play with Cloonix:
 
 ```bash
+$ cd
+$ cd cloonix-bundle-53
+$ mkdir demos
+$ cd demos
+$ wget https://clownix.net/downloads/cloonix-53/demos/eth_cvm.sh
+$ wget https://clownix.net/downloads/cloonix-53/demos/eth_kvm.sh
+$ wget https://clownix.net/downloads/cloonix-53/demos/eth_zip.sh
+$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_cvm.sh
+$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_kvm.sh
+$ wget https://clownix.net/downloads/cloonix-53/demos/wpa_zip.sh
+$ chmod +x *
+```
+
+To run a demo script, run the following commands:
+
+```bash
+$ cd
 $ cd cloonix-bundle-53/demos
 $ ./ping_demo.sh
 ```
