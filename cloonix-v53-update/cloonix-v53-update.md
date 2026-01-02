@@ -1,6 +1,6 @@
 % Cloonix Network Emulator Updated to Version 53
 
-Cloonix v53 introduces container support, a rootless installation option, experimental support for WiFi emulation, and a simplified user experience. 
+The [Cloonix network emulator](http://clownix.net/) continues to be actively developed. In version 53, it provides container support, a rootless installation option, experimental support for WiFi emulation, and a simplified user experience. 
 
 ![](./Images/00-splash.png)
 
@@ -18,7 +18,7 @@ I list the major changes, since I last looked at Cloonix, below:
 
 One of the most significant additions is native container support, using [crun](https://github.com/containers/crun). Cloonix feature support for containers is, however, limited. For example, one cannot save a container's filesystem and containers do not support Spice connections so they can't run a desktop environment.
 
-Cloonix containers start faster and use fewer resources than KVM virtual machines, or even Docker containers, making them ideal for scenarios where you need many lightweight nodes. I imagine containers in Cloonix will be used to create many clients in a simulation scenario.
+Cloonix containers start faster and use fewer resources than KVM virtual machines, or even Docker containers, making them ideal for scenarios where you need many lightweight nodes. I imagine containers in Cloonix will be used to create many clients in a network simulation scenario.
 
 Cloonix continues to support virtual machines using qemu-kvm, and you can mix containers and KVM VMs in the same Cloonix topology.
 
@@ -552,6 +552,8 @@ nameserver 172.17.0.3
 
 Save the file. 
 
+#### Install packages in CVM-type containers
+
 It is not possible to install packages on the _zip_-type containers. But, if you use the _cvm_-type containers, you can install packages. To enable the apt repository, edit the _/etc/apt/sources.list_ file:
 
 ```txt
@@ -563,6 +565,8 @@ Delete the existing line, and replace it with:
 ```txt
 deb http://deb.debian.org/debian trixie main contrib non-free
 ```
+
+Save the file. Now, CVM-type containers can install new packages.
 
 ## Using the Command-Line Interface
 
@@ -607,7 +611,7 @@ To run a demo script, run the following commands:
 ```bash
 $ cd
 $ cd cloonix-bundle-53/demos
-$ ./ping_demo.sh
+$ ./eth_kvm.sh
 ```
 
 ## Conclusion
