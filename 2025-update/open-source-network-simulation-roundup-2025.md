@@ -2,24 +2,40 @@
 
 This is my annual update, where I check each open-source network simulation and emulation projects's activity level, document version changes to well-maintained projects, identify new projects that deserve attention, and consider projects that may be fading away.
 
-The big story for 2025 is the continued rapid development of *Containerlab*, which seems to have cemented its position as a leading network emulation tool for developers. I also found a few stale projects that users should approach with caution, and I discovered some interesting up-and-coming tools worth watching.
+## Active projects
 
-Read the rest of this post for information about the latest open-source network simulator releases, as of January 2026.
+**Containerlab** continues its impressive development pace, and seems to have cemented its position as a leading network emulation tool for developers. New features added in 2024 and 2025 include VM snapshot/restore functionality, expanded device support, a system for running labs on Kubernetes clusters, and improved container network configuration.
 
-## What's New in 2025?
+**NetLab** has matured significantly with regular updates through 2025, continuing to bring infrastructure-as-code concepts to networking labs. Most recently, and of personal interest to me,  NetLab added support for large BGP community lists in routing policies, which is useful for realistic BGP policy testing. The NetLab developers added many major features over teh past two years.
 
-### Winners
+**[GNS3](https://www.gns3.com/)** continues steady development and seems to be a leading network emulation tool for engineers. The GNS3 team is working on a new 3.0 release that will implement some major architectural changes in GNS3.
 
-**Containerlab** continues its impressive development pace, jumping from version 0.51.3 to 0.72.0 in less than two years. New features include VM snapshot/restore functionality, expanded device support (including Cisco vIOS and ASAv), a new Clabernetes system for running labs on Kubernetes clusters, and improved container network configuration.
+  * The software has surpassed 19.1 million downloads and remains the most popular GUI-based network emulator.
+  * The [*GNS3* source code](https://github.com/GNS3) is on GitHub.
 
-**Shadow**, the network simulator focused on Tor research, released version 3.3.0 with significant improvements including better syscall support, netlink socket improvements for Go programs, and the migration of much of the codebase from C to Rust for better reliability.
+## Steady-state projects
 
-**Kathara** reached version 3.8.0, adding support for custom volumes, privileged mode, and custom entrypoints for devices. The project also introduced a new `kathara-lab-checker` tool to replace the old `ltest` command.
+**[ns-3](https://www.nsnam.org/)** continues to be the premier open-source discrete-event network simulator. Recent additions include new Zigbee support and improved Wi-Fi simulation helpers. 
 
-#
-**Filius**, the educational network simulator, continues strong development with version 2.9.4 released in July 2025. This German-language tool remains an excellent choice for teaching networking concepts to students.
+**[Shadow](https://shadow.github.io/)** has evolved into a general-purpose discrete-event network simulator that directly executes real application code. The developer is also re-writing some Shadow components in Rust. Shadow is still being actively maintained, but has not added major, user-facing features in the past two years. The development team responds to GitHub issues and pull requests in a timely manner.
 
-### Projects Showing Signs of Decline
+**[Kathara](https://www.kathara.org/)** has, over the past two years, focused on improving usability, the Python API, and Docker/Kubernetes workflows. The project also introduced a new lab checker tool.
+
+**[Filius](https://www.lernsoftware-filius.de/Herunterladen)**, an educational network simulator, continued development in 2025, delivering bug fixes and minor enhancements. No major deatures were added in the past two years. This German-language tool remains an excellent choice for teaching networking concepts to students.
+
+## Up-and-Coming Projects
+
+I found some interesting new projects worth watching:
+
+
+
+
+Marrionet is seeing bug fixes as recently as May 2025 -- should I add it back to the list?
+https://launchpad.net/marionnet/
+https://www.marionnet.org/site/index.php/en/
+I need to try it out again and see that it works in Ubuntu 26.04 (when available)
+
+## Projects Showing Signs of Decline
 
 **vrnetlab** (the original at github.com/vrnetlab/vrnetlab) has not received commits in over two years and has no published releases. Users should migrate to the [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab) fork, which is actively maintained and integrates seamlessly with Containerlab.
 **remove**
@@ -29,20 +45,6 @@ Read the rest of this post for information about the latest open-source network 
 
 
 **Mininet** remains stable at version 2.3.0, released in February 2021. It continues to work well for SDN development and education, but active development has slowed significantly.
-
-### Up-and-Coming Projects
-
-I found some interesting new projects worth watching:
-
-**NetLab** (formerly netsim-tools) - While not new, NetLab has matured significantly with regular updates through 2025. It provides infrastructure-as-code for networking labs, automatically generating complete IPv4/IPv6 addressing and routing protocol configurations from YAML topology definitions.
-
-
-Marrionet is seeing bug fixes as recently as May 2025 -- should I add it back to the list?
-https://launchpad.net/marionnet/
-https://www.marionnet.org/site/index.php/en/
-I need to try it out again and see that it works in Ubuntu 26.04 (when available)
-
-
 
 
 ## Network Simulators
@@ -54,10 +56,9 @@ Linux on 64-bit Intel processor (built on Ubuntu 23.10)
 `curl -s -o cnet-Linux-x86_64 https://teaching.csse.uwa.edu.au/units/CITS3002/cnet/downloads/cnet-Linux-x86_64`
 
 
-* **[ns-3](https://www.nsnam.org/)**
-  * *ns-3* continues to be the premier open-source discrete-event network simulator. The most recent release is **ns-3.46.1 on December 17, 2025** (up from ns-3.41 in February 2024).
-  * Recent additions include new Zigbee support and improved Wi-Fi simulation helpers.
-  * The [*ns-3* source code](https://gitlab.com/nsnam/ns-3-dev/) is on GitLab.
+* 
+**[ns-3](https://www.nsnam.org/)** continues to be the premier open-source discrete-event network simulator. Recent additions include new Zigbee support and improved Wi-Fi simulation helpers.
+
 
 * **[OMNeT++](https://omnetpp.org/)**
   * *OMNeT++* remains actively maintained with release **6.3.0 on November 12, 2025** (up from 6.0.3 in February 2024).
