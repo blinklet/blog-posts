@@ -1,53 +1,27 @@
 % Recreating a Real-World BGP Hijack with Kathara Network Emulator
 
-In this post, I will show you how to use *Kathara*, a container-based network emulator, to recreate a real-world BGP route leak incident. By building a small 4-AS network topology and simulating the January 2026 Venezuela route leak, you'll learn both the fundamentals of Kathara and gain hands-on experience with BGP security concepts.
+[Kathará](https://www.kathara.org/) is a container-based network emulator developed by researchers at Roma Tre University in Italy as a modern successor to the [Netkit network emulator](https://opensourcenetworksimulators.com/tag/netkit/). Kathará uses Docker containers to emulate network devices rather than full virtual machines. This approach enables users to create complex topologies comprised of dozens of routers on a modest laptop. Kathará uses simple text-based configuration files that are easy to version control and share. It's open source, actively maintained, and runs on Linux, Windows, and macOS.
 
-BGP hijacks and route leaks remain one of the most significant threats to Internet routing security. Understanding how these incidents occur is essential for network engineers who need to implement proper safeguards. Rather than just reading about BGP security, I believe the best way to learn is by doing—and that's where network emulation comes in.
-
-<!--more-->
+In this post, I will use the *Kathará* network emulator to recreate a real-world BGP route leak incident. By building a small 4-AS network topology and simulating the [January 2026 Venezuela route leak](https://blog.cloudflare.com/bgp-route-leak-venezuela/), I expect to learn both the fundamentals of Kathará and to gain hands-on experience with BGP security concepts.
 
 ## Why Emulate BGP Hijacks?
 
 BGP, the Border Gateway Protocol, is the glue that holds the Internet together. It allows autonomous systems (ASes) to exchange routing information and determine the best paths to reach destinations across the global network. However, BGP was designed in an era when trust between network operators was assumed, leaving it vulnerable to both accidental misconfigurations and malicious attacks.
 
-Route leaks and prefix hijacks can:
+[BGP hijacks](https://manrs.org/2020/09/what-is-bgp-prefix-hijacking-part-1/) and [route leaks](https://datatracker.ietf.org/doc/html/rfc7908) are one of the most significant threats to Internet routing security. Understanding how these incidents occur helps network engineers implement proper safeguards. By recreating these scenarios in a safe, isolated lab environment, one can observe exactly how route leaks propagate through a network and experiment with mitigation techniques without affecting real infrastructure.
 
-- **Redirect traffic** through unintended paths, enabling surveillance or data interception
-- **Cause outages** by creating routing loops or blackholing traffic
-- **Violate routing policies** by breaking the expected customer-provider relationships
 
-By recreating these scenarios in a safe, isolated lab environment, you can observe exactly how route leaks propagate through a network and experiment with mitigation techniques without affecting real infrastructure.
+## Install Kathará
 
-## Prerequisites
-
-Before we begin, you'll need to set up your lab environment and have some foundational knowledge.
-
-### Required Knowledge
-
-- **Basic BGP concepts**: You should understand what autonomous systems are, the difference between eBGP and iBGP, and how BGP path selection works. If you need a refresher, I recommend the [FRRouting BGP documentation](https://docs.frrouting.org/en/latest/bgp.html).
-- **Linux command line**: You'll be working in terminal sessions to configure routers and run commands.
-- **Basic Docker concepts**: While you don't need to be a Docker expert, understanding containers and images will help you troubleshoot issues.
+Before we begin, you'll need to install Kathará and set up a basic lab environment.
 
 ### Install Docker
 
-Kathara uses Docker (or Podman) as its container runtime. Install Docker on your Linux system using your distribution's package manager.
+Kathará uses Docker (or Podman) as its container runtime. Install Docker on your Linux system using your distribution's package manager. 
 
-For Ubuntu/Debian:
+I am running Ubuntu 24.04 LTS so I followed the [official Docker installation guide](https://docs.docker.com/engine/install/) for Ubuntu.
 
-```bash
-$ sudo apt update
-$ sudo apt install docker.io
-$ sudo systemctl enable --now docker
-```
-
-For Fedora:
-
-```bash
-$ sudo dnf install docker
-$ sudo systemctl enable --now docker
-```
-
-Add your user to the `docker` group so you can run containers without `sudo`:
+After that, add your user to the `docker` group so you can run containers without `sudo`:
 
 ```bash
 $ sudo usermod -aG docker $USER
@@ -61,73 +35,175 @@ $ docker run hello-world
 
 You should see a message confirming Docker is installed correctly.
 
-### Install Kathara
+### Install Kathará
 
-Kathara can be installed via pip. I recommend using Python 3.10 or later:
+The [install instructions on the Kathará wiki](https://github.com/KatharaFramework/Kathara/wiki/Linux) **are outdated**[^1] and do not work in Ubuntu 24.04 because they use the deprecated _apt-key_ command. You can skip the _apt-key_ command. Instead, follow the [Kathara instructions on the Launchpad platform](https://launchpad.net/~katharaframework/+archive/ubuntu/kathara) to add the Kathará PPA to Ubuntu, then install Kathará. 
 
-```bash
-$ pip install kathara
-```
-
-Alternatively, you can install Kathara system-wide:
+I summarize the modified install commands, below:
 
 ```bash
-$ sudo pip install kathara
+$ sudo add-apt-repository ppa:katharaframework/kathara
+$ sudo apt update
+$ sudo apt install kathara
 ```
 
 Verify the installation:
 
 ```bash
-$ kathara version
+$ kathara --version
 ```
 
-You should see output showing the Kathara version and detected container runtime (Docker).
+You should see output showing the Kathará version, which was 3.8.0 when I wrote this post.
+
+### Verify Your Setup
+
+Run a the _check_ command to proactively [download the Kathará base container](https://hub.docker.com/r/kathara/base) and the [Kathará network plugin container](https://hub.docker.com/r/kathara/katharanp/tags), and validate that Kathará can communicate with Docker:
+
+```text
+$ kathara check
+```
+
+With your environment ready, we can move on to exploring what Kathará is and how it structures network labs.
+
+### Set the Terminal Emulator
+
+Run the _kathara settings_ command and set the terminal emulator used by emulated devices to be the _Gnome Terminal_. Alternatively, you could install xterm, because it is the default used by Kathará.
+
+```text
+$ kathara settings
+```
+
+In the menu that appears, select _5_, for _Choose terminal_:
+
+```text
+  ╔═════════════════════════════════════════════════════════════════════════╗
+  ║                                                                         ║
+  ║                            Kathara Settings                             ║
+  ║                                                                         ║
+  ╠═════════════════════════════════════════════════════════════════════════╣
+  ║                                                                         ║
+  ║                      Choose the option to change.                       ║
+  ║                                                                         ║
+  ╠═════════════════════════════════════════════════════════════════════════╣
+  ║                                                                         ║
+  ║    1 - Choose default manager                                           ║
+  ║    2 - Choose default image                                             ║
+  ║    3 - Automatically open terminals on startup                          ║
+  ║    4 - Choose device shell to be used                                   ║
+  ║    5 - Choose terminal emulator to be used                              ║
+  ║    6 - Choose Kathara prefixes                                          ║
+  ║    7 - Choose logging level to be used                                  ║
+  ║    8 - Print Startup Logs on device startup                             ║
+  ║    9 - Enable IPv6                                                      ║
+  ║   10 - Choose Docker Network Plugin version                             ║
+  ║   11 - Automatically mount /hosthome on startup                         ║
+  ║   12 - Automatically mount /shared on startup                           ║
+  ║   13 - Docker Image Update Policy                                       ║
+  ║   14 - Enable Shared Collision Domains                                  ║
+  ║   15 - Configure a remote Docker connection                             ║
+  ║   16 - Exit                                                             ║
+  ║                                                                         ║
+  ║                                                                         ║
+  ╚═════════════════════════════════════════════════════════════════════════╝
+  >> 5
+
+```
+
+Then, choose _2_, to select _gnome-terminal_:
+
+```text
+  ╔═════════════════════════════════════════════════════════════════════════╗
+  ║                                                                         ║
+  ║                   Choose terminal emulator to be used                   ║
+  ║                                                                         ║
+  ║                         Current: /usr/bin/xterm                         ║
+  ║                                                                         ║
+  ╠═════════════════════════════════════════════════════════════════════════╣
+  ║                                                                         ║
+  ║     Terminal emulator application to be used for device terminals.      ║
+  ║   **The application must be correctly installed in the host system!**   ║
+  ║                      Default is `/usr/bin/xterm`.                       ║
+  ║                                                                         ║
+  ╠═════════════════════════════════════════════════════════════════════════╣
+  ║                                                                         ║
+  ║    1 - /usr/bin/xterm                                                   ║
+  ║    2 - /usr/bin/gnome-terminal                                          ║
+  ║    3 - TMUX                                                             ║
+  ║    4 - Choose another terminal emulator                                 ║
+  ║    5 - Return to Kathara Settings                                       ║
+  ║                                                                         ║
+  ║                                                                         ║
+  ╚═════════════════════════════════════════════════════════════════════════╝
+  >> 2
+```
+
+Then select _16_ to _Exit_.
 
 ### Pull the FRR Docker Image
 
-We'll use the *kathara/frr* Docker image, which includes FRRouting—an open-source routing suite that supports BGP, OSPF, and other protocols. Pull it in advance to save time later:
+We'll use the [*kathara/frr* Docker image](https://hub.docker.com/r/kathara/frr), which includes FRRouting, an open-source routing suite that supports BGP, OSPF, and other protocols. Pull it in advance to save time later:
 
 ```bash
 $ docker pull kathara/frr
 ```
 
-### Verify Your Setup
+### Test a very simple lab
 
-Run a quick test to ensure everything is working:
+To verify that Kathará is working, create a lab of two routers connected to each other:
 
-```bash
-$ kathara check
+Create a test lab:
+
+```
+mkdir Kathara
+cd Kathara
+mkdir kathara-test
+cd kathara-test
 ```
 
-This command validates that Kathara can communicate with Docker and that your environment is properly configured. If you see any errors, resolve them before continuing.
+Create a simple lab file:
 
-With your environment ready, we can move on to exploring what Kathara is and how it structures network labs.
+```
+cat > lab.conf << EOF
+r1[image]=kathara/frr
+r2[image]=kathara/frr
+EOF
+```
 
-## What is Kathara?
+Start the lab:
 
-Kathara is an open-source, container-based network emulator that allows you to create complex network topologies using lightweight Docker containers. It's the spiritual successor to *Netkit*, a popular network emulation tool that used User-Mode Linux (UML) virtual machines. While Netkit served the networking education community well for many years, it eventually became difficult to maintain as Linux evolved. Kathara emerged in 2017 as a modern replacement, bringing the same ease of use but with the performance and flexibility benefits of containers.
+```
+kathara lstart
+```
 
-### From Netkit to Kathara
+You should see two terminals windows open, each attached to a different router, as seen below:
 
-If you've used Netkit before, you'll find Kathara immediately familiar. The developers deliberately maintained compatibility with Netkit's lab format, so many existing Netkit labs work with Kathara with minimal or no modifications. The key difference is under the hood: instead of spinning up full UML virtual machines, Kathara launches Docker containers—making labs start faster, use less memory, and run on a wider variety of systems including Windows and macOS (via Docker Desktop).
+![]()
 
-For those new to network emulation, Kathara provides a straightforward way to define network topologies in simple text files and have them running in seconds. Each network device becomes a container, and virtual network links connect them together in whatever topology you design.
+Stop and clean up:
 
-### Container-Based Architecture
+```
+kathara lclean
+```
 
-Kathara's architecture consists of three main components:
 
-1. **The Kathara CLI**: The command-line tool you interact with to start, stop, and manage labs
+
+
+
+## Kathará Overview
+
+Kathará's architecture consists of three main components:
+
+1. **The Kathará CLI**: The command-line tool you interact with to start, stop, and manage labs
 2. **Docker (or Podman)**: The container runtime that actually runs the network devices
 3. **Container images**: Pre-built images containing the software for each device type (routers, hosts, etc.)
 
-When you start a lab, Kathara reads your configuration files, creates Docker containers for each device, and sets up virtual network interfaces to connect them. Each container runs in its own isolated network namespace, giving you the same isolation you'd get with physical hardware or traditional VMs—but with much less overhead.
+When you start a lab, Kathará reads your configuration files, creates Docker containers for each device, and sets up virtual network interfaces to connect them. Each container runs in its own isolated network namespace, giving you the same isolation you'd get with physical hardware or traditional VMs—but with much less overhead.
 
-The *kathara/frr* image we pulled earlier contains FRRouting, giving us fully-featured routers capable of running BGP, OSPF, IS-IS, and other routing protocols. Kathara also provides base images for simple hosts, and you can use any Docker image that suits your needs.
+The *kathara/frr* image we pulled earlier contains FRRouting, giving us fully-featured routers capable of running BGP, OSPF, IS-IS, and other routing protocols. Kathará also provides base images for simple hosts, and you can use any Docker image that suits your needs.
 
 ### Lab Structure
 
-A Kathara lab is simply a directory containing configuration files that describe your network topology. The structure is straightforward:
+A Kathará lab is simply a directory containing configuration files that describe your network topology. The structure is straightforward:
 
 | File/Directory | Purpose |
 |----------------|---------|
@@ -199,9 +275,9 @@ ip addr add 10.0.0.1/30 dev eth1
 
 The startup file executes after the device directory contents are copied in, so you can reference any configuration files you've provided.
 
-### Essential Kathara Commands
+### Essential Kathará Commands
 
-Kathara provides a simple set of commands to manage your labs. Here are the ones you'll use most often:
+Kathará provides a simple set of commands to manage your labs. Here are the ones you'll use most often:
 
 #### Starting a Lab
 
@@ -211,7 +287,7 @@ To start a lab, navigate to the lab directory and run:
 $ kathara lstart
 ```
 
-Kathara reads *lab.conf*, creates the necessary containers and networks, and executes each device's startup script. You'll see output as each device comes online:
+Kathará reads *lab.conf*, creates the necessary containers and networks, and executes each device's startup script. You'll see output as each device comes online:
 
 ```
 Starting lab...
@@ -257,10 +333,10 @@ This stops and removes all containers created for the lab, freeing up system res
 A few more commands worth knowing:
 
 - `kathara exec <device> <command>` — Run a command on a device without opening an interactive session
-- `kathara wipe` — Remove all Kathara containers and networks (useful if something goes wrong)
-- `kathara list` — Show all running Kathara devices across all labs
+- `kathara wipe` — Remove all Kathará containers and networks (useful if something goes wrong)
+- `kathara list` — Show all running Kathará devices across all labs
 
-With these fundamentals covered, you now understand how Kathara structures labs and how to interact with them. In the next section, we'll explore the BGP hijack scenario we're going to recreate before building the actual lab.
+With these fundamentals covered, you now understand how Kathará structures labs and how to interact with them. In the next section, we'll explore the BGP hijack scenario we're going to recreate before building the actual lab.
 
 ## Understanding BGP Hijacks and Route Leaks
 
@@ -357,7 +433,7 @@ Now that you understand the theory behind what we're recreating, let's build the
 
 ## Building the 4-AS BGP Lab
 
-In this section, we'll create a complete Kathara lab with four autonomous systems running BGP. We'll configure proper customer-provider relationships and verify that routing works correctly before we introduce the route leak in the next section.
+In this section, we'll create a complete Kathará lab with four autonomous systems running BGP. We'll configure proper customer-provider relationships and verify that routing works correctly before we introduce the route leak in the next section.
 
 ### Lab Directory Structure
 
@@ -1726,29 +1802,32 @@ For deeper exploration of BGP security, I recommend these resources:
 
 ## Conclusion
 
-In this post, I've walked you through using Kathara to recreate a real-world BGP route leak incident. By building a 4-AS topology and deliberately introducing a misconfiguration, you've seen firsthand how route leaks occur and propagate—and more importantly, how to detect and fix them.
+In this post, I've walked you through using Kathará to recreate a real-world BGP route leak incident. By building a 4-AS topology and deliberately introducing a misconfiguration, you've seen firsthand how route leaks occur and propagate—and more importantly, how to detect and fix them.
 
 Here's what we covered:
 
-- **Kathara fundamentals**: How to structure labs with *lab.conf*, device directories, and startup files; essential commands like `kathara lstart`, `lclean`, and `connect`
+- **Kathará fundamentals**: How to structure labs with *lab.conf*, device directories, and startup files; essential commands like `kathara lstart`, `lclean`, and `connect`
 - **BGP security concepts**: The differences between origin hijacks, more-specific prefix hijacks, and route leaks; the valley-free routing principle
 - **Hands-on lab work**: Building a complete 4-AS topology with FRRouting, configuring proper BGP policies, and then breaking them to observe the effects
 - **Mitigation techniques**: Prefix filtering, BGP communities, and RPKI/ROV as layers of defense
 
 The beauty of network emulation is that you can experiment freely without risking production infrastructure. I encourage you to extend this lab—try adding more ASes, experiment with different route-map configurations, or simulate other types of BGP incidents like origin hijacks with more-specific prefixes.
 
-### Next Steps with Kathara
+### Next Steps with Kathará
 
-If you want to continue exploring BGP scenarios with Kathara, the project maintains an excellent collection of ready-to-use labs:
+If you want to continue exploring BGP scenarios with Kathará, the project maintains an excellent collection of ready-to-use labs:
 
-- **[Kathara Labs Repository](https://github.com/KatharaFramework/Kathara-Labs)**: The official collection of example labs covering various networking topics
+- **[Kathará Labs Repository](https://github.com/KatharaFramework/Kathara-Labs)**: The official collection of example labs covering various networking topics
 - **[Interdomain Routing Labs with FRR](https://github.com/KatharaFramework/Kathara-Labs/tree/main/main-labs/interdomain-routing/frr)**: Specifically focused on BGP scenarios using FRRouting, including eBGP/iBGP configurations, route reflection, and more complex multi-AS topologies
-- **[Kathara Wiki](https://github.com/KatharaFramework/Kathara/wiki)**: Comprehensive documentation covering advanced features like bridged networking, custom Docker images, and integration with other tools
+- **[Kathará Wiki](https://github.com/KatharaFramework/Kathara/wiki)**: Comprehensive documentation covering advanced features like bridged networking, custom Docker images, and integration with other tools
 
 ### Final Thoughts
 
 BGP route leaks remain one of the Internet's persistent vulnerabilities. While the Venezuela incident we recreated had limited impact thanks to AS-path prepending, other leaks have caused significant outages affecting millions of users. As network engineers, understanding these vulnerabilities—not just theoretically, but through hands-on practice—is essential for building more resilient infrastructure.
 
-The good news is that the tools for preventing and detecting route leaks are improving. RPKI adoption continues to grow, major providers are implementing stricter filtering, and initiatives like MANRS are raising awareness of routing security best practices. By practicing with tools like Kathara, you're building the skills needed to contribute to a more secure Internet.
+The good news is that the tools for preventing and detecting route leaks are improving. RPKI adoption continues to grow, major providers are implementing stricter filtering, and initiatives like MANRS are raising awareness of routing security best practices. By practicing with tools like Kathará, you're building the skills needed to contribute to a more secure Internet.
 
 Happy labbing!
+
+
+[^1] https://github.com/KatharaFramework/Kathara/wiki/Linux as viewed on January 25, 2026
