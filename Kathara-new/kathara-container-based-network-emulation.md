@@ -1,15 +1,12 @@
 % Recreating a Real-World BGP Hijack with Kathara Network Emulator
 
-[Kathará](https://www.kathara.org/) is a container-based network emulator developed by researchers at Roma Tre University in Italy as a modern successor to the [Netkit network emulator](https://opensourcenetworksimulators.com/tag/netkit/). Kathará uses Docker containers to emulate network devices rather than full virtual machines. This approach enables users to create complex topologies comprised of dozens of routers on a modest laptop. Kathará uses simple text-based configuration files that are easy to version control and share. It's open source, actively maintained, and runs on Linux, Windows, and macOS.
+[Kathará](https://www.kathara.org/) is a container-based network emulator developed by researchers at Roma Tre University in Italy as a modern successor to the [Netkit network emulator](https://opensourcenetworksimulators.com/tag/netkit/). Kathará uses Docker containers to emulate network devices rather than full virtual machines. This approach enables users to create complex topologies comprised of dozens of routers on a modest laptop. Kathará uses simple text-based configuration files that are easy to version control and share. It's open source, actively maintained, and runs on Linux, Windows, and MacOS.
 
-In this post, I will use the *Kathará* network emulator to recreate a real-world BGP route leak incident. By building a small 4-AS network topology and simulating the [January 2026 Venezuela route leak](https://blog.cloudflare.com/bgp-route-leak-venezuela/), I expect to learn both the fundamentals of Kathará and to gain hands-on experience with BGP security concepts.
+In this post, I will use the *Kathará* network emulator to recreate a real-world BGP route leak incident. By building a small network topology and simulating the [January 2026 Venezuela route leak](https://blog.cloudflare.com/bgp-route-leak-venezuela/), I expect to learn both the fundamentals of Kathará and to gain hands-on experience with BGP security concepts.
 
 ## Why Emulate BGP Hijacks?
 
-BGP, the Border Gateway Protocol, is the glue that holds the Internet together. It allows autonomous systems (ASes) to exchange routing information and determine the best paths to reach destinations across the global network. However, BGP was designed in an era when trust between network operators was assumed, leaving it vulnerable to both accidental misconfigurations and malicious attacks.
-
 [BGP hijacks](https://manrs.org/2020/09/what-is-bgp-prefix-hijacking-part-1/) and [route leaks](https://datatracker.ietf.org/doc/html/rfc7908) are one of the most significant threats to Internet routing security. Understanding how these incidents occur helps network engineers implement proper safeguards. By recreating these scenarios in a safe, isolated lab environment, one can observe exactly how route leaks propagate through a network and experiment with mitigation techniques without affecting real infrastructure.
-
 
 ## Install Kathará
 
@@ -149,41 +146,105 @@ $ docker pull kathara/frr
 
 ### Test a very simple lab
 
-To verify that Kathará is working, create a lab of two routers connected to each other:
+To verify that Kathará is working, let's create a minimal lab with two FRR routers connected to each other and test connectivity between them.
 
-Create a test lab:
+First, create a directory for your test lab:
 
-```
-mkdir Kathara
-cd Kathara
-mkdir kathara-test
-cd kathara-test
+```bash
+$ mkdir -p ~/Kathara/kathara-test
+$ cd ~/Kathara/kathara-test
 ```
 
-Create a simple lab file:
+Create the *lab.conf* file that defines two routers connected by a shared network segment:
 
-```
-cat > lab.conf << EOF
-r1[image]=kathara/frr
-r2[image]=kathara/frr
+```bash
+$ cat > lab.conf << 'EOF'
+LAB_NAME="Simple Two-Router Test"
+
+# Router 1 with one interface on the shared link
+r1[0]="link1"
+r1[image]="kathara/frr"
+
+# Router 2 with one interface on the shared link
+r2[0]="link1"
+r2[image]="kathara/frr"
 EOF
+```
+
+Create startup scripts to assign IP addresses to each router:
+
+```bash
+$ cat > r1.startup << 'EOF'
+ip addr add 10.0.0.1/24 dev eth0
+ip link set eth0 up
+EOF
+```
+
+```bash
+$ cat > r2.startup << 'EOF'
+ip addr add 10.0.0.2/24 dev eth0
+ip link set eth0 up
+EOF
+```
+
+Your lab directory should now contain:
+
+```
+kathara-test/
+├── lab.conf
+├── r1.startup
+└── r2.startup
 ```
 
 Start the lab:
 
-```
-kathara lstart
+```bash
+$ kathara lstart
 ```
 
-You should see two terminals windows open, each attached to a different router, as seen below:
-
-![]()
-
-Stop and clean up:
+You should see output indicating both routers have started:
 
 ```
-kathara lclean
+Starting lab "Simple Two-Router Test"...
+=========================== Starting devices ===========================
+r1: Container created and started.
+r2: Container created and started.
+========================= All devices started ==========================
 ```
+
+Now connect to router r1 and ping r2:
+
+```bash
+$ kathara connect r1
+```
+
+Inside the r1 container, ping r2's IP address:
+
+```bash
+root@r1:/# ping -c 3 10.0.0.2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.095 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=0.078 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=0.082 ms
+
+--- 10.0.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2041ms
+rtt min/avg/max/mdev = 0.078/0.085/0.095/0.007 ms
+```
+
+Success! The two routers can communicate. Exit the container:
+
+```bash
+root@r1:/# exit
+```
+
+When you're done testing, clean up the lab:
+
+```bash
+$ kathara lclean
+```
+
+This removes all containers and networks created for the lab. With Kathará working correctly, you're ready to build more complex topologies.
 
 
 
