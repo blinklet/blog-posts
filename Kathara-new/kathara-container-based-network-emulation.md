@@ -146,7 +146,7 @@ $ docker pull kathara/frr
 
 ### Test a very simple lab
 
-To verify that Kathará is working, let's create a minimal lab with two FRR routers connected to each other and test connectivity between them.
+To verify that Kathará is working, and to get an initial view of how Kathara labs are created and nodes are configured, let's create a minimal lab with two FRR routers connected to each other and test connectivity between them.
 
 First, create a directory for your test lab:
 
@@ -160,12 +160,8 @@ Create the *lab.conf* file that defines two routers connected by a shared networ
 ```bash
 $ cat > lab.conf << 'EOF'
 LAB_NAME="Simple Two-Router Test"
-
-# Router 1 with one interface on the shared link
 r1[0]="link1"
 r1[image]="kathara/frr"
-
-# Router 2 with one interface on the shared link
 r2[0]="link1"
 r2[image]="kathara/frr"
 EOF
@@ -187,7 +183,7 @@ ip link set eth0 up
 EOF
 ```
 
-Your lab directory should now contain:
+The lab directory should now contain:
 
 ```
 kathara-test/
@@ -202,81 +198,106 @@ Start the lab:
 $ kathara lstart
 ```
 
-You should see output indicating both routers have started:
+Kathara reads the _lab.conf_ file and the two _startup_ files to set up and configure the lab. You should see output indicating both routers have started:
 
 ```
-Starting lab "Simple Two-Router Test"...
-=========================== Starting devices ===========================
-r1: Container created and started.
-r2: Container created and started.
-========================= All devices started ==========================
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              Starting Network Scenario                              │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│ Name: Simple Two-Router Test                                                        │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+[Deploying collision domains]   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/1
+[Deploying devices]   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2
 ```
 
-Now connect to router r1 and ping r2:
+And, you should see two new terminal windows. Each one is connected to one of the routers in the lab. By default, Kathara starts terminals with the Bash shell:
+
+![](simple-lab-01.png)
+
+Inside the r1 container's terminal window, ping r2's IP address:
 
 ```bash
-$ kathara connect r1
-```
-
-Inside the r1 container, ping r2's IP address:
-
-```bash
-root@r1:/# ping -c 3 10.0.0.2
+root@r1:/# ping -c2 10.0.0.2
 PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
-64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.095 ms
-64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=0.078 ms
-64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=0.082 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.995 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=1.08 ms
 
 --- 10.0.0.2 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2041ms
-rtt min/avg/max/mdev = 0.078/0.085/0.095/0.007 ms
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 0.995/1.038/1.081/0.043 ms
+root@r1:/# 
 ```
 
-Success! The two routers can communicate. Exit the container:
-
-```bash
-root@r1:/# exit
-```
-
-When you're done testing, clean up the lab:
+We demonstrated that a simple lab with two routers works as expected. Clean up the lab:
 
 ```bash
 $ kathara lclean
 ```
 
-This removes all containers and networks created for the lab. With Kathará working correctly, you're ready to build more complex topologies.
+This removes all containers and networks created for the lab. 
 
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              Stopping Network Scenario                              │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+[Deleting devices]   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2
+[Deleting collision domains]   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/1
+```
 
-
-
+With Kathará working correctly, we're ready to build more complex topologies.
 
 ## Kathará Overview
 
-Kathará's architecture consists of three main components:
-
-1. **The Kathará CLI**: The command-line tool you interact with to start, stop, and manage labs
-2. **Docker (or Podman)**: The container runtime that actually runs the network devices
-3. **Container images**: Pre-built images containing the software for each device type (routers, hosts, etc.)
-
-When you start a lab, Kathará reads your configuration files, creates Docker containers for each device, and sets up virtual network interfaces to connect them. Each container runs in its own isolated network namespace, giving you the same isolation you'd get with physical hardware or traditional VMs—but with much less overhead.
+When you start a lab, Kathará reads the lab configuration files in the lab folder, creates Docker containers for each device, and sets up virtual network interfaces to connect them. The [Kathará man pages](https://www.kathara.org/man-pages/kathara.1.html) provide clear information about how to use the command line interface. 
 
 The *kathara/frr* image we pulled earlier contains FRRouting, giving us fully-featured routers capable of running BGP, OSPF, IS-IS, and other routing protocols. Kathará also provides base images for simple hosts, and you can use any Docker image that suits your needs.
 
 ### Lab Structure
 
-A Kathará lab is simply a directory containing configuration files that describe your network topology. The structure is straightforward:
+As you saw in our simple test, a Kathará lab is simply a directory containing configuration files that describe your network topology and configuration. The lab file and directory structure is straightforward. The lab.conf file is mandatory. Other files or folders are optional, as required by your lab topology.
 
 | File/Directory | Purpose |
 |----------------|---------|
-| `lab.conf` | Main configuration file that defines devices and network connections |
-| `<device>/` | Directory for each device containing configuration files |
-| `<device>.startup` | Shell script that runs when a device starts |
+| _lab.conf_ | Main configuration file that defines devices and network connections |
+| _lab.dep_ | Optional network scenario dependencies defines the order in which devices start |
+| _lab.ext_ | Optional direct connections between virtual lab devices and physical host interfaces |
+| _\<device\>/_ | Directory for each device containing configuration files (optional)|
+| _\<device\>.startup_ | Shell script that runs when a device starts (optional)|
 
 Let's look at each component in detail.
 
-#### The lab.conf File
+### Lab Configuration File Syntax
 
-The *lab.conf* file is the heart of your lab. It defines which devices exist and how they connect to each other. Here's a simple example:
+The best way to learn the lab configuration file syntax is to [look at the example labs](https://github.com/KatharaFramework/Kathara-Labs) provided by the Kathará team. 
+
+If you want to see all options that are available, the Kathará team provides man-pages documentation for the syntax of each lab configuratuion file. See the links below:
+
+* **[lab.conf](https://www.kathara.org/man-pages/kathara-lab.conf.5.html)**: mandatory configuration file syntax manual
+* **[lab.dep](https://www.kathara.org/man-pages/kathara-lab.dep.5.html)** optional configuration file syntax manual
+* **[lab.ext](https://www.kathara.org/man-pages/kathara-lab.ext.5.html)** optional configuration file syntax manual
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Here's a simple example:
 
 ```
 LAB_NAME="My First Lab"
