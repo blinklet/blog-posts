@@ -1,6 +1,5 @@
 #!/bin/bash
-# Configure IP address for upstream's interface
-ip addr add 10.0.3.2/24 dev eth0
+# Bring up interfaces (IP addresses configured in FRR)
 ip link set eth0 up
 
 # Start FRRouting

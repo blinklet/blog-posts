@@ -37,15 +37,17 @@ YouTube announced `208.65.152.0/22`, while Pakistan Telecom announced the more-s
 | Router   | AS  | Interface | IP Address    | Role |
 |----------|-----|-----------|---------------|------|
 | youtube  | 100 | eth0      | 10.0.1.1/24   | Victim |
-| youtube  | 100 | lo        | 100.100.100.1 | Router ID |
+| youtube  | 100 | lo        | 100.100.0.1   | Router ID (within /22) |
 | pakistan | 200 | eth0      | 10.0.2.2/24   | Hijacker |
-| pakistan | 200 | lo        | 200.200.200.1 | Router ID |
+| pakistan | 200 | lo        | 200.200.0.1   | Router ID |
 | transit  | 300 | eth0      | 10.0.1.2/24   | Transit |
 | transit  | 300 | eth1      | 10.0.2.1/24   | Transit |
 | transit  | 300 | eth2      | 10.0.3.1/24   | Transit |
-| transit  | 300 | lo        | 30.30.30.1    | Router ID |
+| transit  | 300 | lo        | 30.30.0.1     | Router ID |
 | upstream | 400 | eth0      | 10.0.3.2/24   | Observer |
-| upstream | 400 | lo        | 40.40.40.1    | Router ID |
+| upstream | 400 | lo        | 40.40.0.1     | Router ID |
+
+**Important**: Loopback addresses are placed within each AS's announced prefix so they are reachable via BGP. The link addresses (10.0.x.x) are not advertised.
 
 ## Announced Prefixes
 
@@ -77,6 +79,15 @@ show ip bgp
 ```
 
 You should see YouTube's `100.100.0.0/22` with path `300 100`.
+
+Test connectivity to YouTube's loopback (use `-I lo` to source from loopback):
+
+```bash
+exit
+ping -I lo -c 3 100.100.0.1
+```
+
+This should succeed - traffic reaches YouTube via BGP.
 
 ### Simulate the hijack
 
