@@ -6,11 +6,11 @@ Kathará uses Docker containers to emulate network devices. This approach enable
 
 In this post, I will use the *Kathará* network emulator to recreate one of the most famous BGP hijacking incidents in Internet history, the [2008 YouTube hijack](https://www.ripe.net/publications/news/industry-developments/youtube-hijacking-a-ripe-ncc-ris-case-study). By building a small network topology and simulating a similar attack, we will learn both the fundamentals of Kathará and to gain hands-on experience with BGP security concepts.
 
-## Install Kathará
+### Install Kathará
 
 First, we will install the Kathará network emulator and test it by setting up a basic lab environment.
 
-### Install Docker
+#### Install Docker
 
 Kathará uses Docker as its container runtime. Install Docker on your Linux system using the [official Docker installation guide](https://docs.docker.com/engine/install/).
 
@@ -28,7 +28,7 @@ $ docker run hello-world
 
 You should see a message confirming Docker is installed correctly.
 
-### Install Kathará
+#### Install Kathará
 
 The [install instructions on the Kathará wiki](https://github.com/KatharaFramework/Kathara/wiki/Linux) **are outdated**[^1] and do not work in Ubuntu 24.04 because they use the deprecated _apt-key_ command. You can skip the _apt-key_ command. Instead, follow the [Kathara instructions on the Launchpad platform](https://launchpad.net/~katharaframework/+archive/ubuntu/kathara) to add the Kathará PPA to Ubuntu, then install Kathará. 
 
@@ -48,7 +48,7 @@ $ kathara --version
 
 You should see output showing the Kathará version, which was 3.8.0 when I wrote this post.
 
-### Verify Your Setup
+#### Verify Your Setup
 
 Run a the _check_ command to proactively [download the Kathará base container](https://hub.docker.com/r/kathara/base) and the [Kathará network plugin container](https://hub.docker.com/r/kathara/katharanp/tags), and validate that Kathará can communicate with Docker:
 
@@ -58,7 +58,7 @@ $ kathara check
 
 With your environment ready, we can move on to configuring Kathará.
 
-### Set the Terminal Emulator
+#### Set the Terminal Emulator
 
 Run the _kathara settings_ command and set the terminal emulator used by emulated devices to be the _Gnome Terminal_. Alternatively, you could install xterm, because it is the default used by Kathará.
 
@@ -132,7 +132,7 @@ Then, choose _2_, to select _gnome-terminal_:
 
 Then select _16_ to _Exit_.
 
-### Pull the FRR Docker Image
+#### Pull the FRR Docker Image
 
 We'll use the [*kathara/frr* Docker image](https://hub.docker.com/r/kathara/frr), which includes FRRouting, an open-source routing suite that supports BGP, OSPF, and other protocols. Pull it now to save time later:
 
@@ -140,7 +140,7 @@ We'll use the [*kathara/frr* Docker image](https://hub.docker.com/r/kathara/frr)
 $ docker pull kathara/frr
 ```
 
-### Test a very simple lab
+#### Test a very simple lab
 
 To verify that Kathará is working, and to get an initial view of how Kathara labs are created and nodes are configured, let's create a minimal lab with two FRR routers connected to each other and test connectivity between them.
 
@@ -241,7 +241,7 @@ This removes all containers and networks created for the lab.
 
 With Kathará working correctly, we're ready to build more complex topologies.
 
-## Understanding BGP Hijacks and Route Leaks
+### Understanding BGP Hijacks and Route Leaks
 
 [BGP hijacks](https://manrs.org/2020/09/what-is-bgp-prefix-hijacking-part-1/) and [route leaks](https://datatracker.ietf.org/doc/html/rfc7908) are among the most significant threats to Internet routing security. [Understanding how these incidents occur](https://www.kentik.com/blog/a-brief-history-of-the-internets-biggest-bgp-incidents/) helps network engineers implement proper safeguards. By recreating these scenarios in a safe, isolated lab environment, one can observe exactly how prefix hijacks propagate through a network and experiment with mitigation techniques without affecting real infrastructure.
 
@@ -263,7 +263,7 @@ A route leak occurs when an AS violates the expected routing policies by redistr
 
 Route leaks are almost always accidental and are usually caused by misconfiguration, but their effects can be severe. When a small customer AS suddenly appears to offer a shortcut to major networks, traffic can flood through infrastructure that was never designed to handle it.
 
-## The 2008 Pakistan YouTube Hijack
+### The 2008 Pakistan YouTube Hijack
 
 The incident we'll recreate is the famous YouTube hijacking that occurred on February 24, 2008, when Pakistan Telecom ([AS17557](https://www.peeringdb.com/asn/17557)) accidentally blocked YouTube globally. This event has become a textbook example of how BGP vulnerabilities can have worldwide impact and is [well-documented by RIPE NCC](https://www.ripe.net/publications/news/industry-developments/youtube-hijacking-a-ripe-ncc-ris-case-study) and other organizations.
 
@@ -273,7 +273,7 @@ The key players were:
 - _PCCW (AS3491)_: Pakistan Telecom's upstream provider who propagated the hijack
 - _Various upstream providers_: Who received and further propagated the bogus route
 
-### What Happened
+#### What Happened
 
 The Pakistan government ordered local ISPs to block access to YouTube due to content the government deemed offensive. Pakistan Telecom attempted to comply by creating a blackhole route for a more specific prefix that was part of YouTube's allocated IP address space. However, instead of keeping this route prefix internal to their own network, they accidentally announced it to the global Internet through their upstream provider PCCW (AS3491).
 
@@ -285,13 +285,13 @@ YouTube responded to the attack by announcing even-more-specific prefixes 208.65
 
 This incident is ideal for a lab exercise because it's a straightforward BGP hijack with no other complications like AS-path manipulation and it demonstrates both the attack and the mitigation.
 
-## Kathará BGP Lab Setup
+### Kathará BGP Lab Setup
 
 When you start a lab, Kathará reads the lab configuration files in the lab folder, creates Docker containers for each device, and sets up virtual network interfaces to connect them. The [Kathará man pages](https://www.kathara.org/man-pages/kathara.1.html) provide information about how to use the command line interface and the [Kathará Lab man pages](https://www.kathara.org/man-pages/kathara-lab.conf.5.html) provide information about building lab configuration files. 
 
 The *kathara/frr* image we pulled earlier contains [FRRouting](https://frrouting.org/), which enables us to create fully-featured routers capable of running BGP, OSPF, IS-IS, and other routing protocols. Kathará also provides base images for simple hosts, and you can use other [Kathará device images](https://hub.docker.com/u/kathara/) or any other Docker image that suits your needs.
 
-### What We'll Build
+#### What We'll Build
 
 In our lab, we'll create a simplified 4-AS topology that will help us emulate this incident:
 
@@ -325,7 +325,7 @@ In this topology:
 
 We'll first configure this topology during normal BGP operations where only AS100 announces its prefix. Then we'll introduce the hijack by having AS200 announce a more-specific prefix, and observe how it overrides the legitimate route. Finally, we'll demonstrate how AS100 can counter the hijack using even more-specific announcements.
 
-### Lab Structure
+#### Lab Structure
 
 As you saw in our simple test, above, a Kathará lab is simply a directory containing configuration files that describe your network topology and configuration. The lab file and directory structure is straightforward. The _lab.conf_ file is mandatory. Other files or folders are optional.
 
@@ -337,7 +337,7 @@ As you saw in our simple test, above, a Kathará lab is simply a directory conta
 | _\<device\>/_ | Directory for each device containing configuration files (optional)|
 | _\<device\>.startup_ | Shell script that runs when a device starts (optional)|
 
-### Lab Configuration File Syntax
+#### Lab Configuration File Syntax
 
 The best way to learn the lab configuration file syntax is to [look at the example labs](https://github.com/KatharaFramework/Kathara-Labs) provided by the Kathará team. 
 
@@ -347,7 +347,7 @@ If you want to see all options that are available, the Kathará team provides ma
 * *[lab.dep](https://www.kathara.org/man-pages/kathara-lab.dep.5.html)*: optional configuration file syntax manual
 * *[lab.ext](https://www.kathara.org/man-pages/kathara-lab.ext.5.html)*:  optional configuration file syntax manual
 
-### Device Directories and Lab Structure
+#### Device Directories and Lab Structure
 
 For each device in your lab, you will usually create a directory with the same name. Files in this directory are copied into the container's filesystem when the lab starts. This is how you provide configuration files to your devices.
 
@@ -384,7 +384,7 @@ bgp-youtube-hijack/
 
 The contents of `youtube/etc/frr/` will appear at `/etc/frr/` inside the _youtube_ container. This allows you to pre-configure FRR's routing daemons with the required BGP settings.
 
-### BGP Lab Config File
+#### BGP Lab Config File
 
 To emulate a small network in which we can "replay" the famous YouTube BGP Hijack incident, we create a _lab.conf_ file that creates four routers connected as shown in the diagram above.
 
@@ -427,7 +427,7 @@ The syntax follows a simple pattern: `device[interface]="collision_domain"`, whe
 
 The `device[image]` property specifies which Docker image to use for each device. In this example, we are using the [kathara/frr](https://hub.docker.com/r/kathara/frr) image for all routers, but you could use different images like [kathara/bird](https://hub.docker.com/r/kathara/bird) or [vyos](https://containerlab.dev/manual/kinds/vyosnetworks_vyos/#), if you wish.
 
-### IP Addressing Scheme
+#### IP Addressing Scheme
 
 Before we configure the routers, we must first establish the IP addressing plan:
 
@@ -440,7 +440,7 @@ Before we configure the routers, we must first establish the IP addressing plan:
 | Transit ↔ Upstream | 10.0.3.0/30 | transit | eth2 | 10.0.3.1/30 |
 | | | upstream | eth0 | 10.0.3.2/30 |
 
-### Loopback addresses
+#### Loopback addresses
 
 Each AS router will have one or two loopback addresses that are reachable within its advertised prefix. The loopback addresses and announced prefixes for this hijack scenario will be:
 
@@ -453,7 +453,7 @@ Each AS router will have one or two loopback addresses that are reachable within
 
 Notice that YouTube announces 100.100.0.0/22 while Pakistan will announce 100.100.0.0/24, which is a more-specific prefix within YouTube's range, after we trigger the hijack.
 
-### FRR Daemons Configuration
+#### FRR Daemons Configuration
 
 Each router needs a *daemons* file to tell FRR which routing protocols to enable. Create the directory structure and daemons file for each device. The content is identical for all routers:
 
@@ -484,11 +484,11 @@ Save this content to:
 * *transit/etc/frr/daemons*
 * *upstream/etc/frr/daemons*
 
-### frr.conf Files
+#### frr.conf Files
 
 Each router is pre-configured with an [_frr.conf_ file](https://docs.frrouting.org/en/latest/basic.html#integrated-config-file).
 
-#### YouTube Configuration (AS100) — The Victim
+##### YouTube Configuration (AS100) — The Victim
 
 The following FRR configuration file sets up BGP with AS number 100, representing YouTube's AS36561, peers with Transit at 10.0.1.2 (AS300), and announces the 100.100.0.0/16 prefix, representing YouTube's 208.65.152.0/22.
 
@@ -532,7 +532,7 @@ end
 This lab scenario, YouTube is the legitimate owner of the 100.100.0.0/22 prefix.  
 
 
-#### Pakistan Telecom Configuration (AS200) — The Hijacker
+##### Pakistan Telecom Configuration (AS200) — The Hijacker
 
 Initially, Pakistan Telecom will NOT announce the hijacked prefix. We'll add that later to demonstrate the hijack. For now, it only announces its own legitimate prefix.
 
@@ -572,7 +572,7 @@ ip route 200.200.0.0/16 blackhole
 end
 ```
 
-#### Transit/PCCW Configuration (AS300)
+##### Transit/PCCW Configuration (AS300)
 
 Transit represents PCCW (AS3491), the provider that connected both YouTube and Pakistan Telecom and inadvertently propagated the hijack. It peers with all three other ASes and provides transit.
 
@@ -635,7 +635,7 @@ end
 Note that Transit has **no outbound filtering**—it simply propagates all routes it learns. This is the configuration weakness that allowed the real-world hijack to spread globally.
 
 
-#### Upstream Configuration (AS400)
+##### Upstream Configuration (AS400)
 
 Upstream represents the broader Internet—a provider that will receive and observe routes from Transit. This is where we'll see the hijack propagate.
 
@@ -676,11 +676,11 @@ end
 ```
 
 
-### Startup Files
+#### Startup Files
 
 The `<device>.startup` file is a shell script that runs inside the container when it starts. This is where you configure network interfaces, start services, or run any initialization commands. 
 
-#### How Kathará Creates Ethernet Interfaces
+##### How Kathará Creates Ethernet Interfaces
 
 Before each node's startup script runs, Kathará creates network interfaces on each node based on the _lab.conf_ file. So, to avoid conflicts or weird behaviour, we should not create interfaces in the device startup files or by copying network interface configuration files into the node container.
 
@@ -688,7 +688,7 @@ When the `kathara lstart` command is run, Kathará creates the Docker container 
 
 The interfaces exist and are in "DOWN" state when your startup script begins.
 
-#### Interface Naming Convention
+##### Interface Naming Convention
 
 The Ethernet device numbering convention matches the numbers defines in the *lab.conf* file. For example, the *Transit* router's interfaces would be mapped from teh configuration file to the container as follows:
 
@@ -697,7 +697,7 @@ The Ethernet device numbering convention matches the numbers defines in the *lab
 * transit[2] → eth2
 
 
-#### youtube.startup
+##### youtube.startup
 
 Create the file _youtube.startup_ and add the following startup commands:
 
@@ -713,7 +713,7 @@ Save the file in the lab directory, _~/bgp-youtube-hijack/_.
 
 The startup file executes after the device directory contents are copied into the container, so you can reference any configuration files you've provided.
 
-#### pakistan.startup
+##### pakistan.startup
 
 Create *pakistan.startup*:
 
@@ -725,7 +725,7 @@ ip link set eth0 up
 /etc/init.d/frr start
 ```
 
-#### transit.startup
+##### transit.startup
 
 Create *transit.startup*:
 
@@ -739,7 +739,7 @@ ip link set eth2 up
 /etc/init.d/frr start
 ```
 
-#### upstream.startup
+##### upstream.startup
 
 Create *upstream.startup*:
 
@@ -751,15 +751,15 @@ ip link set eth0 up
 /etc/init.d/frr start
 ```
 
-### Ready to start
+#### Ready to start
 
 Now we have a Kathará lab directory that contains a _lab.conf_ file, router startup files, and sub-directories containing the configuration files for each router. We are ready to use the Kathará command-line interface.
 
-## Kathará Command Line Interface
+### Kathará Command Line Interface
 
 Kathará provides a simple set of commands to manage your labs. Here are the ones you'll use most often:
 
-### Starting the Lab
+#### Starting the Lab
 
 To start a lab, navigate to the lab directory and run:
 
@@ -779,7 +779,7 @@ Kathará reads *lab.conf*, creates the necessary containers and networks, and ex
 
 You will also see four terminal windows appear. each one is connected to a different router in the lab.
 
-### Connecting to a Device
+#### Connecting to a Device
 
 If you closed a router's terminal window, you can open another terminal session on a running device. Open a terminal window and enter the command:
 
@@ -789,7 +789,7 @@ $ kathara connect router1
 
 This drops you into a shell inside the router container where you can run commands, check routing tables, or configure the device interactively. To exit, type `exit` or press Ctrl+D.
 
-### Checking Lab Status
+#### Checking Lab Status
 
 To see information about a running lab:
 
@@ -815,7 +815,7 @@ This displays details about all running devices, their interfaces, and which col
 └──────────────────────┴──────────┴─────────────────────┴─────────┴────────────────────┴──────┴───────────┴─────────────────────┴─────────────┴───────────────────┴──────────────────────┘
 ```
 
-### Stopping and Cleaning Up
+#### Stopping and Cleaning Up
 
 When you're done with a lab, clean up all containers and networks:
 
@@ -830,7 +830,7 @@ With these fundamentals covered, you now understand how Kathará structures labs
 In the next sections, we'll use the virtual routers that have been created and interconnected by Kathará, as described in the *lab.cong* file and the router configuration files, to explore how the 2008 YouTube Hijack occurred and how it was mitigated.
 
 
-## Verifying BGP Peering
+### Discover the Normal BGP State
 
 First, we will establish the "normal" state of the lab. On each router, verify that the BGP sessions are established and YouTube's prefix is being announced correctly to "upstream" systems.
 
@@ -1059,7 +1059,7 @@ RPKI validation codes: V valid, I invalid, N Not found
 Displayed  4 routes and 4 total paths
 ```
 
-### Verifying Connectivity
+#### Verifying Connectivity
 
 Let's test connectivity to YouTube's address space. From _Upstream's_ loopback interface, ping _YouTube's_ loopback address *100.100.0.1*:
 
@@ -1091,11 +1091,11 @@ At this point, we have a fully functional 4-AS BGP topology with normal routing:
 In the next section, we'll introduce Pakistan Telecom's more-specific /24 hijack and observe how it overrides YouTube's legitimate route.
 
 
-## Recreating the Prefix Hijack
+### Recreating the Prefix Hijack
 
 Now we will introduce the more-specific prefix announcement that hijacks YouTube's traffic, recreating the 2008 Pakistan incident. This demonstrates how BGP's longest-prefix-match rule can be exploited, even unintentionally.
 
-### The Before State
+#### The Before State
 
 Before making changes, let's confirm YouTube's route is the only one for the 100.100.x.x address space. In the Upstream terminal window:
 
@@ -1117,7 +1117,7 @@ Paths: (1 available, best #1, table default)
       Last update: Sat Jan 31 16:31:16 2026
 ```
 
-### Starting the Hijack
+#### Starting the Hijack
 
 Now we'll simulate Pakistan Telecom announcing the more-specific prefix. In the Pakistan terminal window:
 
@@ -1181,7 +1181,7 @@ In our lab YouTube announces *100.100.0.0/22*, which covers 100.100.0.0 - 100.10
 The /24 is more specific than the /22, so routers will prefer it for any traffic destined to addresses in the 100.100.0.0/24 range.
 
 
-### Observing the Hijack Propagation
+#### Observing the Hijack Propagation
 
 Let's see how the hijack propagates through the network. Go to the Transit terminal window and enter the following commands.
 
@@ -1252,7 +1252,7 @@ Notice the two routes:
 
 In the real incident, Pakistan Telecom was trying to block YouTube internally by creating a blackhole route. The problem was that this route was accidentally announced to their transit provider PCCW, who propagated it globally.
 
-### Understanding the Impact
+#### Understanding the Impact
 
 Now let's see what happens when Upstream tries to reach an IP address in the hijacked range:
 
@@ -1323,7 +1323,7 @@ traceroute to 100.100.1.1 (100.100.1.1), 30 hops max, 60 byte packets
 Traffic to 100.100.1.1 still reaches YouTube (via Transit) because that address is covered by the /22 but NOT by the hijacked /24.
 
 
-### YouTube's Response
+#### YouTube's Response
 
 In the real incident, YouTube responded by announcing their own more-specific prefixes to compete with Pakistan's hijack. Let's simulate this defense.
 
@@ -1434,7 +1434,7 @@ Paths: (1 available, best #1, table default)
 
 YouTube has reclaimed control. The /25 routes from YouTube (AS100) override Pakistan's /24 route. Traffic for 100.100.0.1 now correctly flows to YouTube.
 
-### Cleanup
+#### Cleanup
 
 When you're finished experimenting with the hijack scenario clean up the lab:
 
@@ -1447,42 +1447,42 @@ $ kathara lclean
 [Deleting collision domains]   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/3
 ```
 
-### Summary: The Attack and Defense
+#### Summary: The Attack and Defense
 
-This exercise demonstrated the lifecycle of the Pakistan YouTube hijack:
+This exercise demonstrated the lifecycle of the Pakistan YouTube hijack.
 
 The key lesson is that in the BGP "longest prefix match" game, the most specific route wins. However, while that was possible in 2008, that's a game that attackers and defenders a less able to play in modern networks due to the use of modern BGP security practices. 
 
 
-## Modern BGP Security Practices
+### Modern BGP Security Practices
 
 Now that you've seen how a prefix hijack works, let's discuss the techniques network operators use to prevent them. The Pakistan YouTube incident highlighted critical weaknesses in BGP that the industry has been working to address ever since.
 
 Pakistan Telecom's /24 BGP Hijack and YouTube’s emergency /25 de-aggregation response worked in 2008 because prefix filtering and origin validation were weak. Today, strict prefix-length filtering and the widespread use of RPKI mean that such more-specific announcements would often be rejected.
 
-### Prefix Filtering with Prefix Lists
+#### Prefix Filtering with Prefix Lists
 
 The most fundamental protection against prefix hijacks is explicit prefix filtering. Transit providers can configure their routers to only accept announcements from customers for prefixes the customer is authorized to announce. To accomplish this, they need to maintain a comprehensive list of valid customer prefixes.
 
 Internet providers maintain prefix filter lists using tools like *[bgpq4](https://github.com/bgp/bgpq4)* that automatically generate prefix lists from data stored in Internet Routing Registry (IRR) databases like [RADB](https://www.radb.net/), [RIPE](https://www.ripe.net/), and [ARIN](https://www.arin.net/).
 
-### RPKI and Route Origin Validation
+#### RPKI and Route Origin Validation
 
 [Resource Public Key Infrastructure (RPKI)](https://www.arin.net/resources/manage/rpki/) represents a fundamental shift in BGP security. Instead of relying on trusted databases or manual coordination, RPKI provides cryptographic proof of route authorization. RPKI would have prevented the Pakistan YouTube hijack, if RPKI had existed in 2008.
 
 [RPKI adoption](https://rpki-monitor.antd.nist.gov/) has grown dramatically since the Pakistan YouTube incident. Major networks and tier-1 providers now validate routes and drop RPKI-invalid announcements.
 
-### BGPsec
+#### BGPsec
 
 [BGPsec](https://www.bgpsec.net/) extends RPKI to provide path validation, cryptographically signing each AS hop in the path. While RPKI validates the origin AS, BGPsec validates the entire path, detecting route leaks and path manipulation attacks. However, BGPsec faces significant deployment challenges because every AS in the path must support BGPsec.
 
-## Conclusion
+### Conclusion
 
 In this post, I've walked you through using Kathará to recreate the 2008 Pakistan YouTube BGP prefix hijack. We've learned how to use Kathará to gain hands-on experience with how prefix hijacks occur and propagate, and how to detect and counter them.
 
 The beauty of network emulation, using tools like Kathará, is that you can experiment freely without risking production infrastructure. If you want to continue exploring BGP scenarios with Kathará, the project maintains an [excellent collection of ready-to-use labs](https://github.com/KatharaFramework/Kathara-Labs):
 
-### Further Reading
+#### Further Reading
 
 To get more information about BGP security, I recommend these resources:
 
