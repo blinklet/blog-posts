@@ -2,15 +2,14 @@
 
 In this post, I will show you how to use [Containerlab](https://containerlab.dev/) to build a realistic lab environment consisting of a multi-AS topology with routers running the [Free Range Routing (FRR)](https://frrouting.org/) stack in which you can experiment with BGP security mechanisms. 
 
-I last reviewed Containerlab five years ago in 2021, and it has evolved significantly since then. This post will also highlight the improvements that make Containerlab an excellent choice for building BGP security labs.
+I last reviewed Containerlab five years ago in 2021, and it has evolved significantly since then. This post will also highlight the features that make Containerlab an excellent choice for building BGP security labs.
 
 You will learn how to:
 
 - Set up a multi-AS topology with routers running the [Free Range Routing (FRR)](https://frrouting.org/) stack
-- Emulate an RIR database to support our network scenario
+- Emulate an RIR database to support our network scenario and use RIR database information for prefix filtering
 - Deploy an RPKI validator using [Routinator](https://github.com/NLnetLabs/routinator) to provide route origin validation
-- Simulate a BGP hijack attack and observe how RPKI blocks it
-- Use RIR database information for prefix filtering
+- Simulate a BGP hijack attack and observe how prefix filtering can mitigate it, and how RPKI blocks it
 
 <!--more-->
 
@@ -22,7 +21,7 @@ Containerlab supports a wide range of vendor and open-source network operating s
 
 When I first [reviewed Containerlab in 2021](https://opensourcenetworksimulators.com/2021/05/use-containerlab-to-emulate-open-source-routers/), it was a promising but relatively new project. It's developers were actively working to add more commercial routers to its library of supported devices. Five years later, [Containerlab](https://containerlab.dev) has matured into a developer-friendly network emulation platform that fully supports many readily-available router software images. 
 
-Containerlab continues to support open-source routers via the `kind: linux` node type, which requires users to create their own containers that support open-source routers like [FRR](https://frrouting.org/), [BIRD](https://bird.network.cz/), [GoBGP](https://osrg.github.io/gobgp/), and [OpenBGPD](https://www.openbgpd.org/). This is the same as it was five years ago. I suppose if I want a "native" FRR container image for Containerlab, I should create one myself and contribute to the project.
+For open-source routers, Containerlab continues to support the `kind: linux` node type, which enables users to create their own containers that support open-source routers like [FRR](https://frrouting.org/), [BIRD](https://bird.network.cz/), [GoBGP](https://osrg.github.io/gobgp/), and [OpenBGPD](https://www.openbgpd.org/). This is the same as it was five years ago.
 
 ### BGP Security: The Problem and the Solutions
 
@@ -39,25 +38,25 @@ Recent incidents, such as the [U.S. Research & Education regional network hijack
 BGP routing faces two primary attack vectors:
 
 * *Prefix hijacking*: An attacker announces someone else's IP prefix, either accidentally or maliciously. Traffic destined for the legitimate owner gets routed to the attacker instead. The famous [2008 Pakistan/YouTube incident](https://opensourcenetworksimulators.com/2026/02/bgp-hijack-with-kathara-network-emulator/) is a classic example.
-* *Route leaks*: An AS incorrectly propagates routes it should not, often due to misconfiguration. This can cause traffic to take unexpected paths, potentially through networks that lack capacity or that enable surveillance.
+* *Route leaks*: An AS incorrectly propagates routes it should not, often due to misconfiguration. This can cause traffic to take unexpected paths, potentially through networks that lack capacity or that enable surveillance. A recent example of a route leak that affected the Internet is the [Verizon/Pensylvania route leak incident](https://blog.cloudflare.com/how-verizon-and-a-bgp-optimizer-knocked-large-parts-of-the-internet-offline-today/).
 
 #### Defense Mechanisms
 
 Fortunately, the networking community has developed defenses. These defenses are not built into the BGP protocol. Instead, they are "best practices" that must be implemented by network operators. For example, network operators may proactively build filters and access control lists based on information from Regional Internet Registry (RIR) databases that provide authoritative information the IP address allocations of each participating Autonomous System (AS) on the Internet. Also, network operators may integrate Resource Public Key Infrastructure (RPKI) validators to provide cryptographic proof that an AS is authorized to announce specific IP prefixes.
 
-*Internet Routing Registries (IRRs)* are databases maintained by Regional Internet Registries (RIRs) like ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC. These databases contain records of which ASes are authorized to announce which prefixes. Network operators can query IRR databases to build prefix filters, rejecting announcements that don't match registered information. However, IRR data is not cryptographically signed and relies on voluntary registration, so it can be incomplete or outdated.
+*Internet Routing Registries (IRRs)* are databases maintained by Regional Internet Registries (RIRs) like ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC. These databases contain records of which ASes are authorized to announce which prefixes. Network operators can query IRRs to build prefix filters, which they use to reject announcements that don't match registered information. However, IRR data is not cryptographically signed and relies on voluntary registration, so it can be incomplete or outdated.
 
 *RPKI (Resource Public Key Infrastructure)* addresses the authentication gap with cryptographic verification. RIRs issue digital certificates that bind IP address blocks to the organizations that hold them. Prefix owners then create *Route Origin Authorizations (ROAs)*. ROAs are signed objects that specify which AS numbers are authorized to announce their prefixes and the maximum prefix length allowed.
 
 #### How RPKI Validation Works
 
-RPKI validators fetch ROA data from the five RIRs' publication points and build a validated cache of prefix-to-AS mappings. Routers connect to these validators using the RPKI-to-Router (RTR) protocol to receive the validated data. When a BGP announcement arrives, the router checks it against the RPKI data and assigns one of three validation states:
+RPKI validators fetch ROA data from RIRs' publication points and build a validated cache of prefix-to-AS mappings. Routers connect to these validators using the RPKI-to-Router (RTR) protocol to receive the validated data. When a BGP announcement arrives, the router checks it against the RPKI data and assigns one of three validation states:
 
-- **Valid**: A ROA exists that matches the prefix and originating AS
-- **Invalid**: A ROA exists, but the announcement doesn't match (wrong AS or prefix too specific)
-- **NotFound**: No ROA exists for this prefix
+* *Valid*: A ROA exists, and it matches the prefix and originating AS
+* *Invalid*: A ROA exists, but the announcement doesn't match (wrong AS or prefix too specific)
+* *NotFound*: No ROA exists for this prefix
 
-Network operators typically configure their routers to prefer Valid routes, deprioritize NotFound routes, and reject Invalid routes entirely. This policy effectively blocks hijack attempts where the attacker lacks a valid ROA for the target prefix.
+Network operators typically configure their routers to prefer Valid routes, de-prioritize NotFound routes, and reject Invalid routes entirely. This policy effectively blocks hijack attempts where the attacker lacks a valid ROA for the target prefix.
 
-The [MANRS (Mutually Agreed Norms for Routing Security)](https://www.manrs.org/) initiative encourages network operators to implement these practices, and RPKI adoption has grown steadily. As of 2026, over 50% of announced prefixes have ROAs, making RPKI increasingly effective at preventing hijacks.
+The [MANRS (Mutually Agreed Norms for Routing Security)](https://www.manrs.org/) initiative encourages network operators to implement these practices, and [RPKI adoption](https://isbgpsafeyet.com/) has grown steadily. As of 2026, [over 60% of announced prefixes have ROAs](https://rpki-monitor.antd.nist.gov/), making RPKI increasingly effective at preventing hijacks.
 
