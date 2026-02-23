@@ -42,13 +42,23 @@ BGP routing faces two primary attack vectors:
 
 #### Defense Mechanisms
 
-Fortunately, the networking community has developed defenses. These defenses are not built into the BGP protocol. Instead, they are "best practices" that must be implemented by network operators. For example, network operators may proactively build filters and access control lists based on information from Regional Internet Registry (RIR) databases that provide authoritative information the IP address allocations of each participating Autonomous System (AS) on the Internet. Also, network operators may integrate Resource Public Key Infrastructure (RPKI) validators to provide cryptographic proof that an AS is authorized to announce specific IP prefixes.
+Fortunately, the networking community has developed defenses. But, these defenses are not built into the BGP protocol. Instead, they are "best practices" that must be implemented by network operators. The *[MANRS (Mutually Agreed Norms for Routing Security)](https://www.manrs.org/)* initiative encourages network operators to implement these practices.
 
-*Internet Routing Registries (IRRs)* are databases maintained by Regional Internet Registries (RIRs) like ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC. These databases contain records of which ASes are authorized to announce which prefixes. Network operators can query IRRs to build prefix filters, which they use to reject announcements that don't match registered information. However, IRR data is not cryptographically signed and relies on voluntary registration, so it can be incomplete or outdated.
+For example, network operators may proactively build filters and access control lists based on information from *Internet Routing Registries (IRRs)* that provide authoritative information the IP address allocations of each participating Autonomous System (AS). Also, network operators may integrate Resource *Public Key Infrastructure (RPKI)* validators to provide cryptographic proof that an AS is authorized to announce specific IP prefixes.
 
-*RPKI (Resource Public Key Infrastructure)* addresses the authentication gap with cryptographic verification. RIRs issue digital certificates that bind IP address blocks to the organizations that hold them. Prefix owners then create *Route Origin Authorizations (ROAs)*. ROAs are signed objects that specify which AS numbers are authorized to announce their prefixes and the maximum prefix length allowed.
+#### How Prefix Filtering Works
+
+Internet Routing Registries (IRRs) are databases maintained by Regional Internet Registries (RIRs) like ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC. These databases contain records of which ASes are authorized to announce which prefixes. Network operators can query IRRs to build prefix filters, which they use to reject announcements that don't match registered information.
+
+When an organization obtains IP address space, they register their allocation in the appropriate IRR along with their AS number. This creates a public record stating "AS64500 is authorized to announce 203.0.113.0/24." Other network operators can query these databases to learn which prefixes each AS should be announcing.
+
+To implement filtering, operators periodically extract prefix information from IRRs and convert it into router configurations using tools like *[bgpq4](https://nsrc.org/workshops/2025/nsrc-ngnog2025-bgp/networking/bgp-deploy/en/presentations/BGPQ4-Introduction.pdf)*. The router then applies these prefix filters to incoming announcements. If a peer announces a prefix that isn't in their registered set, the router rejects the announcement. This prevents peers from advertising prefixes they don't own.
+
+The main limitation of IRR-based filtering is that the data is not cryptographically signed. Registration is voluntary, and validation of entries varies between registries. This means IRR data can be incomplete, outdated, or in some cases, fraudulently registered. Despite these limitations, IRR filtering remains a widely-deployed first line of defense against route hijacks.
 
 #### How RPKI Validation Works
+
+RPKI (Resource Public Key Infrastructure) addresses the authentication gap with cryptographic verification. RIRs issue digital certificates that bind IP address blocks to the organizations that hold them. Prefix owners then create *Route Origin Authorizations (ROAs)*. ROAs are signed objects that specify which AS numbers are authorized to announce their prefixes and the maximum prefix length allowed.
 
 RPKI validators fetch ROA data from RIRs' publication points and build a validated cache of prefix-to-AS mappings. Routers connect to these validators using the RPKI-to-Router (RTR) protocol to receive the validated data. When a BGP announcement arrives, the router checks it against the RPKI data and assigns one of three validation states:
 
@@ -56,7 +66,5 @@ RPKI validators fetch ROA data from RIRs' publication points and build a validat
 * *Invalid*: A ROA exists, but the announcement doesn't match (wrong AS or prefix too specific)
 * *NotFound*: No ROA exists for this prefix
 
-Network operators typically configure their routers to prefer Valid routes, de-prioritize NotFound routes, and reject Invalid routes entirely. This policy effectively blocks hijack attempts where the attacker lacks a valid ROA for the target prefix.
-
-The [MANRS (Mutually Agreed Norms for Routing Security)](https://www.manrs.org/) initiative encourages network operators to implement these practices, and [RPKI adoption](https://isbgpsafeyet.com/) has grown steadily. As of 2026, [over 60% of announced prefixes have ROAs](https://rpki-monitor.antd.nist.gov/), making RPKI increasingly effective at preventing hijacks.
+Network operators typically configure their routers to prefer Valid routes, de-prioritize NotFound routes, and reject Invalid routes entirely. This policy effectively blocks hijack attempts where the attacker lacks a valid ROA for the target prefix. [RPKI adoption](https://isbgpsafeyet.com/) has grown steadily so that, as of 2026, [over 60% of announced prefixes have ROAs](https://rpki-monitor.antd.nist.gov/).
 
