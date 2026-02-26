@@ -68,3 +68,97 @@ RPKI validators fetch ROA data from RIRs' publication points and build a validat
 
 Network operators typically configure their routers to prefer Valid routes, de-prioritize NotFound routes, and reject Invalid routes entirely. This policy effectively blocks hijack attempts where the attacker lacks a valid ROA for the target prefix. [RPKI adoption](https://isbgpsafeyet.com/) has grown steadily so that, as of 2026, [over 60% of announced prefixes have ROAs](https://rpki-monitor.antd.nist.gov/).
 
+### Lab Architecture
+
+Now let's design a lab topology that demonstrates how these BGP security tools work in practice. The multi-AS network will includes legitimate network operators, a potential attacker, and the services needed to support both IRR-based filtering and RPKI validation.
+
+#### Lab Topology
+
+The lab consists of six routers representing different Autonomous Systems, plus two infrastructure containers that provide RIR database and RPKI validation services. The topology simulates a simplified Internet hierarchy with a top-level upstream provider, multiple transit networks, and edge networks that include both a victim and an attacker.
+
+```
+                        ┌──────────────┐
+                        │   upstream   │
+                        │    AS400     │
+                        │ (RPKI-aware) │
+                        └──────┬───────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+    ┌─────┴─────┐        ┌─────┴─────┐        ┌─────┴─────┐
+    │  transit  │        │ transit2  │        │ transit3  │
+    │   AS300   │        │   AS301   │        │   AS302   │
+    └─────┬─────┘        └───────────┘        └─────┬─────┘
+          │                                         │
+    ┌─────┴─────┐                             ┌─────┴─────┐
+    │  victim   │                             │ attacker  │
+    │   AS100   │                             │   AS200   │
+    └───────────┘                             └───────────┘
+
+              ┌──────────────┐    ┌──────────────┐
+              │     RIR      │    │    RPKI      │
+              │   Database   │    │  Validator   │
+              │  (whois db)  │    │ (Routinator) │
+              └──────────────┘    └──────────────┘
+```
+
+This topology is realistic enough to demonstrate real-world scenarios. The multi-tier AS hierarchy mirrors how the actual Internet works, with edge networks connecting through transit providers to larger upstream networks. It is also simple enough to run on a laptop computer. Six routers plus two infrastructure containers can run comfortably on a laptop with 8GB of RAM. Finally, the lab uses public IP prefixes assigned in the ARIN region to emulate real routing policies and realistic prefix lengths. These prefixes are used only inside the Containerlab emulator and will not be announced outside the lab environment.
+
+#### Network Scenario
+
+In this lab, AS100 (the victim) legitimately owns the IP prefix 12.10.0.0/16 and announces it to the Internet through its upstream transit provider AS300. The victim has properly registered their prefix in the RIR database and has created a valid ROA authorizing AS100 to announce 12.10.0.0/16.
+
+AS200 (the attacker) attempts a classic prefix hijack by announcing a more specific route: 12.10.10.0/24. Because BGP prefers more specific prefixes, routers that receive both announcements would normally forward traffic destined for 12.10.10.0/24 toward AS200 instead of toward the legitimate owner, AS100.
+
+The transit providers (AS300, AS301, AS302) represent networks with varying levels of security implementation. AS400, the upstream provider, implements strict RPKI validation and serves as the demonstration point for how RPKI blocks the hijack attempt.
+
+#### Lab Components
+
+Each component in the lab serves a specific purpose in demonstrating BGP security mechanisms:
+
+**Victim (AS100)**: This router represents a legitimate network operator who owns IP address space and wants to protect it from hijacking. The victim announces a /16 prefix and has both an IRR registration and a valid ROA for their address space. In our scenarios, we will observe how traffic flows to this AS under normal conditions and during a hijack attempt.
+
+**Attacker (AS200)**: This router simulates a malicious or misconfigured network that announces prefixes it does not own. The attacker will announce a more specific /24 route that falls within the victim's /16 prefix. Because BGP inherently prefers longer prefix matches, this announcement would hijack traffic in the absence of security controls. The attacker has no valid ROA for the victim's prefix.
+
+**Transit Providers (AS300, AS301, AS302)**: These routers represent intermediate networks that carry traffic between edge networks and the upstream provider. They demonstrate different security postures—some may implement RPKI validation while others do not. This allows us to observe how partially-deployed security measures affect route propagation.
+
+**Upstream Provider (AS400)**: This router sits at the top of our topology and peers with all transit networks. It implements strict RPKI validation, rejecting any routes with Invalid RPKI status. This demonstrates how a well-configured upstream provider can protect its customers from hijack attempts even when the attacker's immediate upstream does not implement RPKI.
+
+**RIR Database**: This container hosts a simplified Internet Routing Registry database that contains registration information for all prefixes in our lab. Network operators can query this database to build prefix filters. In a real network, operators would query databases like RADB, or the IRR databases maintained by ARIN, RIPE, APNIC, LACNIC, or AFRINIC.
+
+**RPKI Validator (Routinator)**: This container runs [Routinator](https://routinator.docs.nlnetlabs.nl/en/stable/), an open-source RPKI validator from NLnet Labs. Routinator fetches and validates ROA data, then serves validated prefix-to-AS mappings to routers via the RPKI-to-Router (RTR) protocol. In our lab, we configure Routinator with local test ROAs rather than connecting to real RIR publication points.
+
+#### IP Addressing Scheme
+
+To keep the lab organized and realistic, I use a consistent addressing scheme based on public ARIN-region carrier-style address space. Each AS has its own internal IP space for loopbacks and customer destinations; the routers are not all placed on one shared management subnet.
+
+| Network | AS Number | Legitimate Prefix Space | Router Loopback |
+|---------|-----------|--------------------------|-----------------|
+| Victim | AS100 | 12.10.0.0/16 | 12.10.255.100/32 |
+| Attacker | AS200 | 24.71.0.0/16 | 24.71.255.200/32 |
+| Transit | AS300 | 66.20.0.0/16 | 66.20.255.1/32 |
+| Transit2 | AS301 | 68.30.0.0/16 | 68.30.255.2/32 |
+| Transit3 | AS302 | 69.40.0.0/16 | 69.40.255.3/32 |
+| Upstream | AS400 | 70.50.0.0/16 | 70.50.255.4/32 |
+
+Point-to-point links between routers use addresses from the 63.0.0.0/16 interconnect range. The RIR database and RPKI validator are attached to a separate operations subnet (71.255.255.0/24) used for service access, not for router loopbacks.
+
+To simulate customer networks inside each AS, I define destination subnets and test hosts from each AS's own address space:
+
+| AS | Customer Subnet | Example Test Host | Purpose |
+|----|------------------|-------------------|---------|
+| AS100 (Victim) | 12.10.10.0/24 | 12.10.10.10 | Legitimate destination network |
+| AS100 (Victim) | 12.10.20.0/24 | 12.10.20.10 | Second legitimate destination network |
+| AS200 (Attacker) | 24.71.10.0/24 | 24.71.10.10 | Attacker's real customer network |
+| AS200 (Attacker) | 12.10.10.0/24 (forged) | 12.10.10.66 | Hijacked destination used in attack scenario |
+| AS300 (Transit) | 66.20.10.0/24 | 66.20.10.10 | Transit internal/customer test network |
+| AS301 (Transit2) | 68.30.10.0/24 | 68.30.10.10 | Transit2 internal/customer test network |
+| AS302 (Transit3) | 69.40.10.0/24 | 69.40.10.10 | Transit3 internal/customer test network |
+| AS400 (Upstream) | 70.50.10.0/24 | 70.50.10.10 | Upstream internal/customer test network |
+
+In normal operation, traffic to 12.10.10.10 and 12.10.20.10 should reach AS100. During the hijack scenario, AS200 announces a forged route for 12.10.10.0/24 so traffic to 12.10.10.10 may be diverted unless filtering and/or RPKI policy blocks the announcement.
+
+#### Topology notes
+
+This topology is realistic enough to demonstrate real-world scenarios. The multi-tier AS hierarchy mirrors how the actual Internet works, with edge networks connecting through transit providers to larger upstream networks. It is also simple enough to run on a laptop computer. Six routers plus two infrastructure containers can run comfortably on a laptop with 8GB of RAM. Finally, the lab uses public IP prefixes assigned in the ARIN region to emulate real routing policies and realistic prefix lengths. These prefixes are used only inside the Containerlab emulator and will not be announced outside the lab environment.
+
