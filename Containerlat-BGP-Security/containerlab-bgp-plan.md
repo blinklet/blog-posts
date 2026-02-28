@@ -137,86 +137,93 @@ This blog post will demonstrate how researchers and network engineers can use Co
 
 **Lab Components:**
 
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Lab Topology                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│                     ┌──────────────┐     ┌──────────────┐       │
-│                     │   upstream   │     │     RIR      │       │
-│                     │    AS400     │_____│  Database    │       │
-│                     │   (RPKI-     │     │              │       │
-│                     │   enabled)   │     │              │       │
-│                     └──────┬───────┘     └──────────────┘       │
-│                            │                                    │
-│                            │                                    │
-│        ┌───────────┐ ┌───────────┐ ┌───────────┐                │
-│        │  transit  │_│ transit2  │_│  transit3 │                │
-│        │   AS300   │ │   AS301   │ │   AS302   │                │
-│        └─────┬─────┘ └─────┬─────┘ └─────┬─────┘                │
-│              │             │             │                      │
-│        ┌─────┴─────┐       │       ┌─────┴─────┐                │
-│        │           │       │       │           │                │
-│        │   AS100   │       │       │   AS200   │                │
-│        │ (Victim)  │       │       │ (Attacker)│                │
-│        └───────────┘       │       └───────────┘                │
-│                            │                                    │
-│                   ┌────────┴────────┐                           │
-│                   │ rpki-validator  │                           │
-│                   │  (Routinator)   │                           │
-│                   └─────────────────┘                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+                  ┌───────────┐  ┌────────────┐
+                  │    RIR    │  │   RPKI     │
+                  │  Database │  │ Repository │
+                  └────────┬──┘  └──┬─────────┘
+                           │        │
+                        ┌──┴────────┴──┐   ┌───────────┐
+                        │   upstream   │   │   RPKI    │
+                        │    AS500     ├───┤ Validator │
+                        └──────┬───────┘   └───────────┘
+                               │
+                         ┌─────┴─────┐
+                         │    IXP    │
+                         │   AS400   │
+                         └──┬──┬──┬──┘
+                            │  │  │
+          ┌─────────────────┘  │  └─────────────────┐
+          │                    │                    │
+    ┌─────┴─────┐        ┌─────┴─────┐        ┌─────┴─────┐
+    │ transit-1 │        │ transit-2 │        │ transit-3 │
+    │   AS300   │        │   AS301   │        │   AS302   │
+    └─────┬─────┘        └───────────┘        └─────┬─────┘
+          │                                         │
+    ┌─────┴─────┐                             ┌─────┴─────┐
+    │   ISP-1   │                             │   ISP-2   │
+    │  victim   │                             │ attacker  │
+    │   AS100   │                             │   AS200   │
+    └───────────┘                             └───────────┘
 ```
 
 **Node Types:**
 - **Victim (AS100)**: Legitimate origin AS, announces prefix with valid ROA
 - **Attacker (AS200)**: Attacker AS, attempts hijack with invalid/no ROA
 - **transit (AS300, 301, 302)**: Transit providers with varying RPKI policies
-- **upstream (AS400)**: Top-level provider with strict RPKI validation
+- **IXP (AS400)**: an internet exchange point
+- **upstream (AS500)**: Top-level provider with strict RPKI validation
 - **RIR database**:  Copy of RIR database suitable for building filter lists in this scenario
 - **rpki-validator**: Routinator container serving RPKI data via RTR
 
 ---
 
-### Part 5: Lab Implementation (1000-1200 words)
+### Part 4.5: Install Containerlab
 
 **Goals:**
-- Step-by-step instructions to build and run the lab
+- Step-by-step instructions to install containerlab and test that it works using a simple scenario, preferably one of the pre-packaged lab scenarios from the Containerlab Labs GitHub repo
+
+
+### Part 5: Basic Lab Implementation (1000-1200 words)
+
+**Goals:**
+- Step-by-step instructions to build and run the lab. The goal is to set up the base configuration so it is ready to configure filtering and RPKI validation, but the routers are not yet configured with filters or RPKI.
 
 **Sections:**
 
-#### 5.2 Containerlab Topology File
+#### 5.1 Containerlab Topology File
 
 - Define all nodes with appropriate images
 - FRR containers for routers
 - Routinator container for RPKI validator
+- Krill container for creating our own CA, to be read by RPKI validator
+- IRR prefix database for registering prefixes and used to generate filters
 - Network links between nodes
 
-#### 5.3 FRR Configuration Files
+#### 5.2 FRR Configuration Files
 
 - BGP peering configuration
 - Prefix announcements
 - RPKI integration (rpki cache commands)
 
+#### 5.3 Set up IRR database
+
+- Set up IRR container to operatate as an IRR database
+- Explain how to register prefixes in IRR database
+
 #### 5.4 RPKI Validator Setup
 
-**Option A: Routinator (from NLnet Labs)**
+Use Routinator (from NLnet Labs)**
 - Most popular open-source RPKI validator
 - Docker image available
 - Serves RTR protocol on port 3323
-- Can use local test ROAs for lab scenarios
-
-**Option B: Alternative validators to mention**
-- rpki-client (OpenBSD)
-- gortr (Cloudflare)
-- FORT Validator
-- Krill (for running your own CA - advanced)
+- Do not use local test ROAs for lab scenarios
+- Use Krill for running your own CA
 
 #### 5.5 Creating Test ROAs
 
-- Use Routinator's local exceptions file
-- Or use Krill to run a mini-CA
+- Use Krill to run a mini-CA
 - Explain how to create ROA entries for lab ASes
 
 ---

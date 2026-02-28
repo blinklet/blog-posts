@@ -1,10 +1,10 @@
-% Using Containerlab to Demonstrate BGP Security Using RPKI and RIR Databases
+# Using Containerlab to Demonstrate BGP Security Using RPKI and RIR Databases
 
-In this post, I will show you how to use [Containerlab](https://containerlab.dev/) to build a realistic lab environment consisting of a multi-AS topology with routers running the [Free Range Routing (FRR)](https://frrouting.org/) stack in which you can experiment with BGP security mechanisms. 
+In this post, I will show you how to use [Containerlab](https://containerlab.dev/) to build a realistic lab environment consisting of a multi-AS topology with routers running the [Free Range Routing (FRR)](https://frrouting.org/) stack. I will use this emulated network to experiment with BGP security mechanisms. 
 
 I last reviewed Containerlab five years ago in 2021, and it has evolved significantly since then. This post will also highlight the features that make Containerlab an excellent choice for building BGP security labs.
 
-You will learn how to:
+This post will show how to:
 
 - Set up a multi-AS topology with routers running the [Free Range Routing (FRR)](https://frrouting.org/) stack
 - Emulate an RIR database to support our network scenario and use RIR database information for prefix filtering
@@ -17,11 +17,139 @@ You will learn how to:
 
 [Containerlab](https://containerlab.dev) is an open-source, container-based network emulation platform that lets you build, run, and tear down realistic network topologies using simple, declarative YAML files. It uses lightweight containers and Linux networking to interconnect routers, switches, hosts, and tools into reproducible labs that behave like real networks. It also supports containerized virtual machines, so it can use many commercial router images.
 
-Containerlab supports a wide range of vendor and open-source network operating systems, integrates cleanly with automation tools (such as Ansible and CI/CD pipelines), and emphasizes “lab-as-code” workflows—making it well suited for learning, testing configurations, validating designs, and demonstrating complex scenarios like BGP, EVPN, or data-center fabrics on a single workstation or server. 
+Containerlab supports a wide range of vendor and open-source network operating systems, integrates cleanly with automation tools (such as Ansible, Nornir, and CI/CD pipelines), and emphasizes “lab-as-code” workflows. It well suited for learning, testing configurations, validating designs, and demonstrating complex scenarios like BGP, EVPN, or data-center fabrics on a single workstation or server. 
 
 When I first [reviewed Containerlab in 2021](https://opensourcenetworksimulators.com/2021/05/use-containerlab-to-emulate-open-source-routers/), it was a promising but relatively new project. It's developers were actively working to add more commercial routers to its library of supported devices. Five years later, [Containerlab](https://containerlab.dev) has matured into a developer-friendly network emulation platform that fully supports many readily-available router software images. 
 
 For open-source routers, Containerlab continues to support the `kind: linux` node type, which enables users to create their own containers that support open-source routers like [FRR](https://frrouting.org/), [BIRD](https://bird.network.cz/), [GoBGP](https://osrg.github.io/gobgp/), and [OpenBGPD](https://www.openbgpd.org/). This is the same as it was five years ago.
+
+Before we build the full BGP security lab, Install Containerlab and test it by launching launch one of the demo topologies. 
+
+#### Containerlab Prerequisites
+
+To install Containerlab, on a Linux host (bare metal, VM, or WSL2) ensure you have at least 4 cores or vCPUs, and 8 GB RAM.
+
+Then, check that Docker is installed and running:
+
+```
+$ sudo systemctl is-active docker
+```
+
+You should see the following output:
+
+```
+active
+```
+
+#### Install Containerlab
+
+The Containerlab project offers [multiple install methods](https://containerlab.dev/install/). I chose to install it from a package:
+
+```
+$ echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
+  sudo tee -a /etc/apt/sources.list.d/netdevops.list
+$ sudo apt update
+$ sudo apt install containerlab
+```
+
+After the installer finishes, add your user ID to the _clab\_admins_ group.
+
+```
+$ sudo usermod -aG clab_admins blinklet
+$ newgrp clab_admins
+```
+
+Then, check the version to ensure the binary is on your path:
+
+```
+$ containerlab version
+```
+
+You should see the following output:
+
+```
+  ____ ___  _   _ _____  _    ___ _   _ _____ ____  _       _     
+ / ___/ _ \| \ | |_   _|/ \  |_ _| \ | | ____|  _ \| | __ _| |__  
+| |  | | | |  \| | | | / _ \  | ||  \| |  _| | |_) | |/ _` | '_ \ 
+| |__| |_| | |\  | | |/ ___ \ | || |\  | |___|  _ <| | (_| | |_) |
+ \____\___/|_| \_| |_/_/   \_\___|_| \_|_____|_| \_\_|\__,_|_.__/ 
+
+    version: 0.73.0
+     commit: 611350001
+       date: 2026-02-08T13:22:45Z
+     source: https://github.com/srl-labs/containerlab
+ rel. notes: https://containerlab.dev/rn/0.73/
+```
+
+#### Deploy a sample lab to validate the setup
+
+The Containerlab team maintains a repository of ready-made lab scenarios. Start with a small FRR lab because it exercises Docker networking, link creation, and teardown.
+
+When you installed Containerlab, it copied the lab example files to the directory, _/etc/containerlab/lab-examples/_. We want to run the [*frr01* lab](https://containerlab.dev/lab-examples/frr01/).
+
+```
+$ cd /etc/containerlab/lab-examples/frr01
+$ containerlab deploy
+```
+
+You will see output indicating that containers are being created, links created, and configurations implemented. Finally, you should see a summary of the lab, as shown below:
+
+```
+╭────────────────────┬─────────────────────────────────┬─────────┬───────────────────╮
+│        Name        │            Kind/Image           │  State  │   IPv4/6 Address  │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-PC1     │ linux                           │ running │ 172.20.20.5       │
+│                    │ wbitt/network-multitool:latest  │         │ 3fff:172:20:20::5 │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-PC2     │ linux                           │ running │ 172.20.20.6       │
+│                    │ wbitt/network-multitool:latest  │         │ 3fff:172:20:20::6 │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-PC3     │ linux                           │ running │ 172.20.20.4       │
+│                    │ wbitt/network-multitool:latest  │         │ 3fff:172:20:20::4 │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-router1 │ linux                           │ running │ 172.20.20.3       │
+│                    │ quay.io/frrouting/frr:master    │         │ 3fff:172:20:20::3 │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-router2 │ linux                           │ running │ 172.20.20.2       │
+│                    │ quay.io/frrouting/frr:master    │         │ 3fff:172:20:20::2 │
+├────────────────────┼─────────────────────────────────┼─────────┼───────────────────┤
+│ clab-frr01-router3 │ linux                           │ running │ 172.20.20.7       │
+│                    │ quay.io/frrouting/frr:master    │         │ 3fff:172:20:20::7 │
+╰────────────────────┴─────────────────────────────────┴─────────┴───────────────────╯
+```
+
+The FRR routers are arranged in a triangle and each one has a "PC" attached to it. If the lab is working correctly, each PC should be able to ping the other.
+
+To test that the lab works, run a ping command from the PC1 container. 
+
+```
+$ docker exec clab-frr01-PC1 ping -c 1 172.20.20.4
+```
+
+**NOTE:** We use the *docker exec* command because Containerlab's SSH functionality does not work with either the _frrouting/frr_ image or the _wbitt/network-multitool_ image. Both those containers are based on Alpine Linux and do not have an SSH server installed. 
+
+You should see the following output:
+
+```
+PING 172.20.20.4 (172.20.20.4) 56(84) bytes of data.
+64 bytes from 172.20.20.4: icmp_seq=1 ttl=64 time=0.124 ms
+
+--- 172.20.20.4 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.124/0.124/0.124/0.000 ms
+```
+
+We see that the ping test works. You can do more tests to verify that containerlab is working. See [my previous post about using open-source routers in Containerlab](https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/) for more details.
+
+
+When you are done, tear the lab down so the bridge interfaces and containers are removed:
+
+```
+$ containerlab destroy
+```
+
+At this point we have confirmed that Containerlab, Docker networking, and your user permissions are working. We can now focus on building the BGP network topology.
+
 
 ### BGP Security: The Problem and the Solutions
 
@@ -169,4 +297,6 @@ In this lab, AS100 (the victim) legitimately owns the IP prefix 12.10.0.0/16 and
 AS200 (the attacker) attempts a classic prefix hijack by announcing a more specific route: 12.10.10.0/24. Because BGP prefers more specific prefixes, routers that receive both announcements would normally forward traffic destined for 12.10.10.0/24 toward AS200 instead of toward the legitimate owner, AS100.
 
 The transit providers (AS300, AS301, AS302) represent networks with varying levels of security implementation. AS500, the upstream provider, will implement strict RPKI validation and serve as the demonstration point for how RPKI blocks the hijack attempt.
+
+
 
