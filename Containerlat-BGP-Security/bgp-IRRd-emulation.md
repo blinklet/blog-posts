@@ -1038,5 +1038,122 @@ $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp neighbors 10.0.0.0" | grep
 
 The filters are active. AS300 will now reject any prefix from AS100 that is not 198.51.100.0/24, and any prefix from AS200 that is not 203.0.113.0/24. In the next section, we will test this by having AS200 attempt to announce a prefix it does not own.
 
+## Testing — The Unauthorized Announcement
+
+With the filters in place, we can now simulate a BGP prefix hijack and see the IRR-based filter block it. AS200 (ISP-B) will attempt to announce 198.51.100.0/24 — a prefix that belongs to AS100 and is not registered to AS200 in the IRR.
+
+### Simulating the Hijack
+
+Enter AS200's router CLI and add the unauthorized prefix announcement:
+
+```bash
+$ docker exec -it clab-bgplab-as200 vtysh
+```
+
+```
+as200# configure terminal
+as200(config)# ip route 198.51.100.0/24 Null0
+as200(config)# router bgp 200
+as200(config-router)# address-family ipv4 unicast
+as200(config-router-af)# network 198.51.100.0/24
+as200(config-router-af)# end
+as200#
+```
+
+The `ip route 198.51.100.0/24 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. Without this route, BGP would not announce it. AS200 is now advertising two prefixes: its own legitimate 203.0.113.0/24 and the stolen 198.51.100.0/24.
+
+Verify that AS200 is indeed announcing both prefixes:
+
+```bash
+$ docker exec clab-bgplab-as200 vtysh -c "show ip bgp"
+```
+
+You should see both 203.0.113.0/24 and 198.51.100.0/24 listed with a status of `*>` (valid, best path, selected). AS200 believes it is announcing both prefixes to AS300.
+
+### Observing the Filter in Action
+
+Now check AS300's BGP table to see what it actually accepted:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 198.51.100.0/24"
+```
+
+Expected output:
+
+```
+BGP routing table entry for 198.51.100.0/24, version X
+Paths: (1 available, best #1, table default)
+  Advertised to non peer-group peers:
+  10.0.0.2
+  100
+    10.0.0.0 from 10.0.0.0 (198.51.100.1)
+      Origin IGP, metric 0, valid, external, best (First path received)
+      Last update: ...
+```
+
+Only **one path** is shown — the legitimate route from AS100 (via 10.0.0.0). The announcement from AS200 was filtered and rejected because 198.51.100.0/24 is not in the AS200-IN prefix-list. The filter worked exactly as designed.
+
+Check the prefix-list counters to confirm the filter matched and denied the unauthorized announcement:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show ip prefix-list AS200-IN"
+```
+
+Expected output:
+
+```
+ip prefix-list AS200-IN: 1 entries
+   seq 5 permit 203.0.113.0/24 (hit count: 1)
+```
+
+The permit entry shows a hit count for AS200's legitimate prefix. The unauthorized 198.51.100.0/24 did not match any permit entry and was denied by the implicit `deny any` at the end of the prefix-list.
+
+Verify that AS100's legitimate announcement is completely unaffected:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 203.0.113.0/24"
+```
+
+AS200's own legitimate prefix (203.0.113.0/24) is still accepted — the filter only blocked the unauthorized announcement.
+
+### What Happens Without Filters
+
+To understand why IRR-based filtering matters, consider what would happen if AS300 had no prefix filters. Temporarily remove the route-map from AS200's session:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "
+configure terminal
+router bgp 300
+ address-family ipv4 unicast
+  no neighbor 10.0.0.2 route-map AS200-IN in
+end
+clear bgp ipv4 unicast * soft in
+"
+```
+
+Now check the BGP table for 198.51.100.0/24:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 198.51.100.0/24"
+```
+
+Without the filter, AS300 now has **two paths** to 198.51.100.0/24: one from AS100 (the legitimate holder) and one from AS200 (the hijacker). BGP's best-path selection will choose one of them — and depending on tie-breaking rules, it might prefer AS200's path if the AS path length is shorter or the neighbor IP is lower. This is exactly how real-world prefix hijacks work: the hijacker's announcement competes with the legitimate one, and some routers on the Internet may prefer the hijacked path.
+
+Restore the filter to re-secure the network:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "
+configure terminal
+router bgp 300
+ address-family ipv4 unicast
+  neighbor 10.0.0.2 route-map AS200-IN in
+end
+clear bgp ipv4 unicast * soft in
+"
+```
+
+The unauthorized route from AS200 is once again filtered. This demonstrates the value of IRR-based prefix filtering: it is a simple, effective first line of defense against prefix hijacks. Without it, any BGP peer could announce any prefix and potentially divert traffic away from the legitimate owner.
+
+
 
 
