@@ -507,3 +507,167 @@ A100
 ```
 
 This confirms that IRRd has loaded the data and is serving it correctly over the WHOIS protocol — exactly as bgpq4 will query it when we generate prefix filters.
+
+## Using bgpq4 to Generate Prefix Filters
+
+With a working IRRd server full of RPSL objects, we can now do what real network operators do every day: use [bgpq4](https://github.com/bgp/bgpq4) to query the registry and automatically generate router prefix-list configurations. This is the step where IRR data becomes actionable — bgpq4 reads the registry, finds which prefixes each AS is authorized to announce, and produces configuration snippets that FRR can apply directly.
+
+### Installing bgpq4
+
+bgpq4 is available in most Linux distributions' package repositories. On Debian or Ubuntu:
+
+```bash
+$ sudo apt install bgpq4
+```
+
+If your distribution does not package bgpq4, you can build it from the [GitHub repository](https://github.com/bgp/bgpq4):
+
+```bash
+$ git clone https://github.com/bgp/bgpq4.git
+$ cd bgpq4
+$ ./bootstrap   # if building from git
+$ ./configure
+$ make
+$ sudo make install
+```
+
+You can also run bgpq4 from a container image without installing anything on your host:
+
+```bash
+$ docker run --rm --network host ghcr.io/bgp/bgpq4:latest -h 10.0.0.4 -S LABRIR AS100
+```
+
+For this post, I assume bgpq4 is installed on the host. The commands work the same way regardless of how you install it.
+
+### Generating FRR Prefix Filters
+
+bgpq4's default output format is Cisco IOS style, which FRR also accepts. To generate a prefix-list for the routes AS100 is authorized to announce, we query our lab IRRd server and use the AS-ISP-A *as-set* as the query target. The `-h` flag points bgpq4 to our IRRd server instead of the default public server (rr.ntt.net), and `-S` selects the LABRIR source:
+
+```bash
+$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
+```
+
+Expected output:
+
+```
+no ip prefix-list AS100-IN
+ip prefix-list AS100-IN permit 198.51.100.0/24
+```
+
+Now generate the prefix-list for AS200:
+
+```bash
+$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+```
+
+Expected output:
+
+```
+no ip prefix-list AS200-IN
+ip prefix-list AS200-IN permit 203.0.113.0/24
+```
+
+We query using the *as-set* names (AS-ISP-A, AS-ISP-B) rather than the AS numbers directly. bgpq4 recursively expands the as-set membership — it finds that AS-ISP-A contains AS100, then looks up all route objects with `origin: AS100`. In our simple lab this produces the same result as querying `AS100` directly, but in production an ISP's as-set might contain dozens of customer ASes, each with their own prefixes. Querying the as-set captures them all in one pass.
+
+You can also query with the AS number directly to see the same result:
+
+```bash
+$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
+```
+
+### Understanding the Output
+
+The output is a pair of FRR (Cisco-style) configuration commands:
+
+- **`no ip prefix-list AS100-IN`** removes any existing prefix-list with that name, ensuring a clean slate
+- **`ip prefix-list AS100-IN permit 198.51.100.0/24`** allows exactly the /24 prefix registered in the IRR
+
+Any prefix not explicitly permitted is implicitly denied — FRR appends an invisible `deny any` at the end of every prefix-list. This means AS300 will reject any prefix announcement from AS100 that does not match 198.51.100.0/24.
+
+bgpq4 supports several useful flags for customizing the output:
+
+- **`-j`** produces JSON output, useful for automation scripts that parse the data programmatically
+- **`-F`** lets you specify a custom output format string for non-standard router platforms
+- **`-A`** enables prefix aggregation — bgpq4 will combine adjacent prefixes into larger blocks where possible, producing shorter prefix-lists
+- **`-4`** or **`-6`** restricts output to IPv4 or IPv6 prefixes (bgpq4 generates IPv4 by default)
+
+For example, JSON output for automation:
+
+```bash
+$ bgpq4 -h 10.0.0.4 -S LABRIR -j -l AS100-IN AS-ISP-A
+```
+
+```json
+{
+  "AS100-IN": [
+    { "prefix": "198.51.100.0/24", "exact": true }
+  ]
+}
+```
+
+### Automation Script
+
+In production, network operators typically automate filter generation. They run bgpq4 on a schedule (often via cron), generate updated prefix-lists from the IRR, and push them to their routers. We can demonstrate this workflow with a simple shell script.
+
+Create the file *irrd-lab/generate-filters.sh*:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+IRRD_HOST="10.0.0.4"
+IRRD_SOURCE="LABRIR"
+TRANSIT_CONTAINER="clab-bgplab-as300"
+
+echo "=== Generating IRR-based prefix filters for AS300 ==="
+
+# Generate prefix-list for AS100 (ISP-A)
+echo "Querying IRRd for AS100 authorized prefixes..."
+AS100_FILTER=$(bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS100-IN AS-ISP-A)
+echo "$AS100_FILTER"
+
+# Generate prefix-list for AS200 (ISP-B)
+echo "Querying IRRd for AS200 authorized prefixes..."
+AS200_FILTER=$(bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS200-IN AS-ISP-B)
+echo "$AS200_FILTER"
+
+# Apply filters to AS300's FRR via vtysh
+echo "Applying prefix filters to ${TRANSIT_CONTAINER}..."
+
+docker exec "$TRANSIT_CONTAINER" vtysh -c "
+configure terminal
+${AS100_FILTER}
+${AS200_FILTER}
+route-map AS100-IN permit 10
+ match ip address prefix-list AS100-IN
+route-map AS100-IN deny 20
+route-map AS200-IN permit 10
+ match ip address prefix-list AS200-IN
+route-map AS200-IN deny 20
+router bgp 300
+ address-family ipv4 unicast
+  neighbor 10.0.0.0 route-map AS100-IN in
+  neighbor 10.0.0.2 route-map AS200-IN in
+end
+"
+
+echo "Filters applied. Performing soft reset..."
+docker exec "$TRANSIT_CONTAINER" vtysh -c "clear bgp ipv4 unicast * soft in"
+
+echo "=== Done ==="
+```
+
+The script does three things:
+
+1. **Queries IRRd** for each peer's authorized prefixes using bgpq4 with the as-set names
+2. **Generates prefix-lists and route-maps** — the prefix-lists define which prefixes are allowed, and the route-maps attach those lists to each BGP neighbor's inbound session
+3. **Applies the configuration** to AS300's running FRR instance via `docker exec ... vtysh` and performs a soft BGP reset so the new filters take effect immediately
+
+Make the script executable:
+
+```bash
+$ chmod +x irrd-lab/generate-filters.sh
+```
+
+We will use this script after deploying the Containerlab topology in the next section. This is exactly the workflow real operators use — the only difference is that they query public IRR servers like RADB instead of a local lab instance, and they push configurations via NETCONF or SSH rather than `docker exec`.
+
