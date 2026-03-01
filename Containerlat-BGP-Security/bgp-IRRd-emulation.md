@@ -1154,6 +1154,35 @@ clear bgp ipv4 unicast * soft in
 
 The unauthorized route from AS200 is once again filtered. This demonstrates the value of IRR-based prefix filtering: it is a simple, effective first line of defense against prefix hijacks. Without it, any BGP peer could announce any prefix and potentially divert traffic away from the legitimate owner.
 
+## Conclusion
+
+In this post, we built a complete IRR-based prefix filtering lab from scratch. We packaged IRRd — the same software that powers production registries like RADB — into a single all-in-one container with PostgreSQL and Redis, populated it with RPSL objects describing three autonomous systems, used bgpq4 to query the registry and generate FRR prefix-list configurations, and deployed a three-AS Containerlab topology that demonstrates how those filters block an unauthorized prefix announcement.
+
+The key takeaway is that IRR-based filtering is straightforward to implement and effective at preventing basic prefix hijacks. The workflow is the same whether you are running a lab or operating a real network: register your prefixes in an IRR, query the registry with bgpq4, and apply the resulting filters to your BGP sessions. Automating this with a script (as we did with *generate-filters.sh*) ensures your filters stay current as the registry is updated.
+
+However, IRR-based filtering has important limitations. IRR registrations are not cryptographically signed — anyone can register a route object claiming to originate any prefix, and some registries do not verify ownership. This means a determined attacker could register fraudulent objects in a permissive registry and bypass IRR-based filters entirely. There is no mathematical proof that the entity registering a prefix actually controls it.
+
+This is where RPKI (Resource Public Key Infrastructure) comes in. RPKI adds cryptographic proof of prefix ownership through Route Origin Authorizations (ROAs) signed by the resource holders themselves, using certificates issued by the Regional Internet Registries. In the next post in this series, I will add an RPKI validator (Routinator) to our Containerlab topology and show how RPKI validation catches hijacks that bypass IRR filters — providing a stronger, cryptographically grounded layer of BGP security on top of the IRR filtering we built here.
+
+## Clean Up
+
+When you are finished experimenting, tear down the lab:
+
+```bash
+$ sudo containerlab destroy -t topology.yml
+```
+
+This removes all containers and network links created by Containerlab. The Docker image (`irrd-lab`) remains cached locally for future use.
+
+## Additional Resources
+
+- [IRRd Documentation](https://irrd.readthedocs.io/en/stable/) — Full reference for IRRd configuration and operation
+- [bgpq4 GitHub Repository](https://github.com/bgp/bgpq4) — Source code, documentation, and examples
+- [RPSL RFC 2622](https://www.rfc-editor.org/rfc/rfc2622) — The Routing Policy Specification Language standard
+- [NLNOG BGP Filter Guide](http://bgpfilterguide.nlnog.net/) — Community guide for building BGP filters using IRR data
+- [MANRS Implementation Guide](https://www.manrs.org/resources/) — Best practices for routing security, including IRR registration and prefix filtering
+- [Containerlab Documentation](https://containerlab.dev/) — Containerlab installation, topology file reference, and examples
+
 
 
 
