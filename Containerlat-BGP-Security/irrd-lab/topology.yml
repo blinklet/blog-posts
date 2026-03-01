@@ -1,0 +1,65 @@
+name: bgplab
+
+mgmt:
+  network: mgmt-bgplab
+  ipv4-subnet: 172.20.30.0/24
+
+topology:
+
+  nodes:
+
+    # ── ISP-A (AS100) — Legitimate prefix holder ─────────
+    as100:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as100/daemons:/etc/frr/daemons
+        - configs/as100/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 198.51.100.1/24 dev lo
+        - ip addr add 10.0.0.0/31 dev eth1
+
+    # ── ISP-B (AS200) — Peer / will attempt hijack ───────
+    as200:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as200/daemons:/etc/frr/daemons
+        - configs/as200/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 203.0.113.1/24 dev lo
+        - ip addr add 10.0.0.2/31 dev eth1
+
+    # ── Transit (AS300) — Applies IRR-based filters ───────
+    as300:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as300/daemons:/etc/frr/daemons
+        - configs/as300/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 100.64.0.1/24 dev lo
+        - ip addr add 10.0.0.1/31 dev eth1
+        - ip addr add 10.0.0.3/31 dev eth2
+        - ip addr add 10.0.0.5/31 dev eth3
+
+    # ── IRRd server (PostgreSQL + Redis + IRRd) ───────────
+    irrd:
+      kind: linux
+      image: irrd-lab
+      binds:
+        - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
+      exec:
+        - ip addr add 10.0.0.4/31 dev eth1
+        - ip route add 10.0.0.0/30 via 10.0.0.5
+        - ip route add 198.51.100.0/24 via 10.0.0.5
+        - ip route add 203.0.113.0/24 via 10.0.0.5
+        - ip route add 100.64.0.0/24 via 10.0.0.5
+
+  links:
+    # AS100 (ISP-A) ↔ AS300 (Transit)
+    - endpoints: ["as100:eth1", "as300:eth1"]
+    # AS200 (ISP-B) ↔ AS300 (Transit)
+    - endpoints: ["as200:eth1", "as300:eth2"]
+    # IRRd ↔ AS300 (Transit)
+    - endpoints: ["irrd:eth1", "as300:eth3"]

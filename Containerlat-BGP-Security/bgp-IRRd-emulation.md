@@ -671,3 +671,247 @@ $ chmod +x irrd-lab/generate-filters.sh
 
 We will use this script after deploying the Containerlab topology in the next section. This is exactly the workflow real operators use — the only difference is that they query public IRR servers like RADB instead of a local lab instance, and they push configurations via NETCONF or SSH rather than `docker exec`.
 
+## Building the Containerlab BGP Network
+
+With the IRRd container image built, RPSL data prepared, and bgpq4 ready to generate filters, we can now assemble everything into a single Containerlab topology. One command will bring up three FRR routers and the IRRd server, establishing a working BGP network that we can then protect with IRR-based prefix filters.
+
+### Containerlab Topology File
+
+Create the file *irrd-lab/topology.yml*:
+
+```yaml
+name: bgplab
+
+mgmt:
+  network: mgmt-bgplab
+  ipv4-subnet: 172.20.30.0/24
+
+topology:
+
+  nodes:
+
+    # ── ISP-A (AS100) — Legitimate prefix holder ─────────
+    as100:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as100/daemons:/etc/frr/daemons
+        - configs/as100/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 198.51.100.1/24 dev lo
+        - ip addr add 10.0.0.0/31 dev eth1
+
+    # ── ISP-B (AS200) — Peer / will attempt hijack ───────
+    as200:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as200/daemons:/etc/frr/daemons
+        - configs/as200/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 203.0.113.1/24 dev lo
+        - ip addr add 10.0.0.2/31 dev eth1
+
+    # ── Transit (AS300) — Applies IRR-based filters ───────
+    as300:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as300/daemons:/etc/frr/daemons
+        - configs/as300/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 100.64.0.1/24 dev lo
+        - ip addr add 10.0.0.1/31 dev eth1
+        - ip addr add 10.0.0.3/31 dev eth2
+        - ip addr add 10.0.0.5/31 dev eth3
+
+    # ── IRRd server (PostgreSQL + Redis + IRRd) ───────────
+    irrd:
+      kind: linux
+      image: irrd-lab
+      binds:
+        - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
+      exec:
+        - ip addr add 10.0.0.4/31 dev eth1
+        - ip route add 10.0.0.0/30 via 10.0.0.5
+        - ip route add 198.51.100.0/24 via 10.0.0.5
+        - ip route add 203.0.113.0/24 via 10.0.0.5
+        - ip route add 100.64.0.0/24 via 10.0.0.5
+
+  links:
+    # AS100 (ISP-A) ↔ AS300 (Transit)
+    - endpoints: ["as100:eth1", "as300:eth1"]
+    # AS200 (ISP-B) ↔ AS300 (Transit)
+    - endpoints: ["as200:eth1", "as300:eth2"]
+    # IRRd ↔ AS300 (Transit)
+    - endpoints: ["irrd:eth1", "as300:eth3"]
+```
+
+A few things to note in this topology:
+
+- The three FRR nodes use the official `quay.io/frrouting/frr:10.2.1` image. The `binds:` stanzas inject the *daemons* and *frr.conf* files directly into each container at startup.
+- The `exec:` stanzas assign IP addresses to the loopback and point-to-point interfaces. FRR's *zebra* daemon picks up these addresses from the Linux kernel and makes them available for BGP to announce.
+- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-data.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all three AS prefixes via AS300.
+- AS300's FRR configuration includes `network 10.0.0.4/31` so that AS100 and AS200 learn routes to the IRRd subnet via BGP. This mirrors how operators in the real world reach public IRR servers like RADB — over the Internet, through their transit providers.
+
+### FRR Configuration Files
+
+Each FRR router needs two files: a *daemons* file that tells FRR which protocol daemons to start, and a *frr.conf* file with the routing configuration.
+
+#### Daemons File
+
+The *daemons* file is identical for all three routers. Create it in each router's configuration subdirectory:
+
+```
+bgpd=yes
+zebra=yes
+```
+
+Only *bgpd* (for BGP) and *zebra* (for the kernel interface) are needed.
+
+#### AS100 — ISP-A (Legitimate Prefix Holder)
+
+AS100 announces 198.51.100.0/24 and peers with AS300. Create *irrd-lab/configs/as100/frr.conf*:
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as100
+!
+ip route 198.51.100.0/24 Null0
+!
+router bgp 100
+ bgp router-id 198.51.100.1
+ !
+ neighbor 10.0.0.1 remote-as 300
+ neighbor 10.0.0.1 description transit-AS300
+ !
+ address-family ipv4 unicast
+  network 198.51.100.0/24
+  neighbor 10.0.0.1 activate
+ exit-address-family
+!
+```
+
+The `ip route 198.51.100.0/24 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. The prefix address is also assigned to the loopback interface in the topology file's `exec:` stanza, which makes it reachable within the container.
+
+#### AS200 — ISP-B (Peer / Future Attacker)
+
+AS200's baseline configuration only announces its own legitimate prefix, 203.0.113.0/24. Later, in the testing section, we will add an unauthorized announcement. Create *irrd-lab/configs/as200/frr.conf*:
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as200
+!
+ip route 203.0.113.0/24 Null0
+!
+router bgp 200
+ bgp router-id 203.0.113.1
+ !
+ neighbor 10.0.0.3 remote-as 300
+ neighbor 10.0.0.3 description transit-AS300
+ !
+ address-family ipv4 unicast
+  network 203.0.113.0/24
+  neighbor 10.0.0.3 activate
+ exit-address-family
+!
+```
+
+#### AS300 — Transit Provider
+
+AS300 peers with both AS100 and AS200. In this base configuration, it accepts all announcements with no prefix filtering — this is the unprotected baseline. AS300 also announces the 10.0.0.4/31 IRRd link subnet into BGP so that AS100 and AS200 can reach the IRR server. Create *irrd-lab/configs/as300/frr.conf*:
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as300
+!
+ip route 100.64.0.0/24 Null0
+!
+router bgp 300
+ bgp router-id 100.64.0.1
+ !
+ neighbor 10.0.0.0 remote-as 100
+ neighbor 10.0.0.0 description peer-AS100
+ neighbor 10.0.0.2 remote-as 200
+ neighbor 10.0.0.2 description peer-AS200
+ !
+ address-family ipv4 unicast
+  network 100.64.0.0/24
+  network 10.0.0.4/31
+  neighbor 10.0.0.0 activate
+  neighbor 10.0.0.2 activate
+ exit-address-family
+!
+```
+
+### Deploy and Verify
+
+With all files in place, the *irrd-lab/* directory should look like this:
+
+```
+irrd-lab/
+├── Dockerfile.irrd
+├── entrypoint.sh
+├── irrd.yaml
+├── lab-irr-data.rpsl
+├── topology.yml
+├── generate-filters.sh
+└── configs/
+    ├── as100/
+    │   ├── daemons
+    │   └── frr.conf
+    ├── as200/
+    │   ├── daemons
+    │   └── frr.conf
+    └── as300/
+        ├── daemons
+        └── frr.conf
+```
+
+First, build the IRRd container image (if you have not already):
+
+```bash
+$ cd irrd-lab
+$ docker build -t irrd-lab -f Dockerfile.irrd .
+```
+
+Deploy the entire lab with a single command:
+
+```bash
+$ sudo containerlab deploy -t topology.yml
+```
+
+This brings up all four containers: three FRR routers and the IRRd server. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
+
+```bash
+$ docker logs -f clab-bgplab-irrd 2>&1 | grep -m1 "IRRd Lab Container Ready"
+```
+
+Once IRRd is ready, verify that BGP sessions are established on AS300:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show bgp summary"
+```
+
+You should see two established BGP peers (AS100 and AS200), each advertising one prefix. Verify the full routing table:
+
+```bash
+$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
+```
+
+Expected output should include three prefixes: 198.51.100.0/24 (from AS100), 203.0.113.0/24 (from AS200), and 100.64.0.0/24 (locally originated by AS300).
+
+Verify that AS100 can reach the IRRd server through AS300:
+
+```bash
+$ docker exec clab-bgplab-as100 bash -c 'echo "AS100" | nc 10.0.0.4 43'
+```
+
+This confirms end-to-end connectivity: AS100 routes to the IRRd subnet (10.0.0.4/31) via its BGP-learned route through AS300, and IRRd responds with the aut-num object for AS100.
+
+This is the **baseline** state — all BGP announcements are accepted without filtering. AS300 trusts whatever its peers announce. In the next section, we will apply the IRR-based prefix filters generated by bgpq4 to restrict what AS300 accepts from each peer.
+
+
