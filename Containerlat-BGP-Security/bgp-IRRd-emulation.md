@@ -358,5 +358,152 @@ If the IRRd container fails to start, the most common issues are:
 - **IRRd configuration errors** — IRRd validates its configuration on startup and will refuse to start if it finds problems. Check the container logs: `docker logs clab-...-irrd`
 - **Slow startup** — The all-in-one container needs 15–30 seconds to initialize PostgreSQL, run migrations, load RPSL data, and start IRRd. If you query the WHOIS port before IRRd is ready, the connection will be refused. Wait for the "IRRd Lab Container Ready" message in the logs.
 
-(end of Part 4)
+## Populating the IRR Database
 
+With the container image built, we need routing policy data for it to serve. In production, IRR databases contain millions of objects registered by thousands of network operators. Our lab needs only a handful: enough to represent three autonomous systems and their authorized prefixes.
+
+### The RPSL Objects File
+
+RPSL (Routing Policy Specification Language) uses a simple text format: each object is a block of `attribute: value` lines, with a blank line between objects. We need four types of objects for our lab:
+
+- A **mntner** (maintainer) object that provides authentication — required by IRRd for any authoritative source
+- A **person** object for the administrative contact (referenced by the maintainer)
+- Three **aut-num** objects describing AS100, AS200, and AS300
+- Two **as-set** objects that group ASes together (AS-ISP-A and AS-ISP-B) — these are what bgpq4 expands when generating filters for customers with downstream networks
+- Three **route** objects that map each prefix to its authorized origin AS
+
+The critical detail is what we *do not* register: there is no route object for 198.51.100.0/24 with origin AS200. This is the gap that the prefix filter will enforce — when AS200 later tries to announce that prefix, bgpq4's filter will block it because the IRR has no matching registration.
+
+Create the file *irrd-lab/lab-irr-data.rpsl*:
+
+```
+mntner:         LAB-MNT
+descr:          Lab maintainer for all objects
+admin-c:        LAB-ADMIN
+upd-to:         lab@localhost
+auth:           MD5-PW $1$lab$3wVEBstb/LcL4FK.G22mP.
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+person:         Lab Administrator
+address:        Lab Network
+phone:          +1-555-0100
+nic-hdl:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+aut-num:        AS100
+as-name:        ISP-A
+descr:          ISP-A - Legitimate prefix holder
+admin-c:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+aut-num:        AS200
+as-name:        ISP-B
+descr:          ISP-B - Peer that will attempt unauthorized announcement
+admin-c:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+aut-num:        AS300
+as-name:        TRANSIT
+descr:          Transit provider - applies prefix filters
+admin-c:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+as-set:         AS-ISP-A
+descr:          AS set for ISP-A and its customers
+members:        AS100
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+as-set:         AS-ISP-B
+descr:          AS set for ISP-B and its customers
+members:        AS200
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+route:          198.51.100.0/24
+descr:          ISP-A prefix
+origin:         AS100
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+route:          203.0.113.0/24
+descr:          ISP-B prefix
+origin:         AS200
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+route:          100.64.0.0/24
+descr:          Transit provider prefix
+origin:         AS300
+mnt-by:         LAB-MNT
+source:         LABRIR
+```
+
+A few things to note about these objects:
+
+- All objects reference **`LAB-MNT`** as their maintainer and use the same MD5 password hash. In a real IRR, each organization would have its own maintainer with its own credentials. For a lab, a single shared maintainer keeps things simple.
+- The **`auth: MD5-PW`** line contains a salted MD5 hash of the password "lab". This matches the override password in our *irrd.yaml* configuration.
+- Every object includes **`source: LABRIR`**, which must exactly match the source name defined in the IRRd configuration (case-sensitive).
+- The **as-set** objects (AS-ISP-A and AS-ISP-B) each contain a single member AS. In practice, an ISP's as-set might contain dozens of customer ASes. bgpq4 recursively expands as-set membership to find all authorized prefixes — this is how operators build filters for transit customers who have their own downstream networks.
+
+### Loading the Data
+
+The entrypoint script we created in Part 4 automatically loads RPSL data from */etc/irrd/lab-irr-data.rpsl* if the file exists. When we build the Containerlab topology in a later section, we will bind-mount this file into the container. The entrypoint runs:
+
+```bash
+irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+```
+
+The `irrd_load_database` command performs a bulk import that replaces all existing objects in the specified source with the contents of the file. This is the same mechanism production IRR operators use to load full database snapshots. For our lab, it loads all 11 objects in a single operation.
+
+If you need to reload the data after the lab is running (for example, after editing the RPSL file), you can run the command manually:
+
+```bash
+$ docker exec clab-bgplab-irrd irrd_load_database \
+    --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+```
+
+### Verifying the Data
+
+Once the IRRd container is running and the data is loaded, you can verify it using WHOIS queries. The WHOIS protocol is text-based: you send a query string over TCP to port 43 and receive the matching objects in plain text.
+
+Query for all route objects registered to AS100:
+
+```bash
+$ docker exec clab-bgplab-irrd bash -c 'echo "-i origin AS100" | nc localhost 43'
+```
+
+Expected output:
+
+```
+route:          198.51.100.0/24
+descr:          ISP-A prefix
+origin:         AS100
+mnt-by:         LAB-MNT
+source:         LABRIR
+```
+
+Query for a specific prefix:
+
+```bash
+$ docker exec clab-bgplab-irrd bash -c 'echo "198.51.100.0/24" | nc localhost 43'
+```
+
+Expand the AS-ISP-A set using IRRd's extended query syntax (the `!i` command):
+
+```bash
+$ docker exec clab-bgplab-irrd bash -c 'echo "!iAS-ISP-A" | nc localhost 43'
+```
+
+Expected output:
+
+```
+A100
+```
+
+This confirms that IRRd has loaded the data and is serving it correctly over the WHOIS protocol — exactly as bgpq4 will query it when we generate prefix filters.
