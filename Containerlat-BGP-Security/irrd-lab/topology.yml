@@ -42,6 +42,7 @@ topology:
         - ip addr add 10.0.0.1/31 dev eth1
         - ip addr add 10.0.0.3/31 dev eth2
         - ip addr add 10.0.0.5/31 dev eth3
+        - ip addr add 10.0.0.7/31 dev eth4
 
     # ── IRRd server (PostgreSQL + Redis + IRRd) ───────────
     irrd:
@@ -51,10 +52,18 @@ topology:
         - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
       exec:
         - ip addr add 10.0.0.4/31 dev eth1
-        - ip route add 10.0.0.0/30 via 10.0.0.5
+        - ip route add 10.0.0.0/29 via 10.0.0.5
         - ip route add 198.51.100.0/24 via 10.0.0.5
         - ip route add 203.0.113.0/24 via 10.0.0.5
         - ip route add 100.64.0.0/24 via 10.0.0.5
+
+    # ── bgpq4 utility container ──────────────────────────
+    bgpq4:
+      kind: linux
+      image: bgpq4-utils
+      exec:
+        - ip addr add 10.0.0.6/31 dev eth1
+        - ip route add default via 10.0.0.7
 
   links:
     # AS100 (ISP-A) ↔ AS300 (Transit)
@@ -63,3 +72,5 @@ topology:
     - endpoints: ["as200:eth1", "as300:eth2"]
     # IRRd ↔ AS300 (Transit)
     - endpoints: ["irrd:eth1", "as300:eth3"]
+    # bgpq4 ↔ AS300 (Transit)
+    - endpoints: ["bgpq4:eth1", "as300:eth4"]

@@ -66,12 +66,12 @@ The lab uses three autonomous systems connected in a hub-and-spoke topology, wit
       ┌─────────┐    ┌──────────┐    ┌─────────┐
       │  ISP-A  ├────┤ Transit  ├────┤  ISP-B  │
       │  AS100  │    │  AS300   │    │  AS200  │
-      └─────────┘    └────┬─────┘    └─────────┘
-                          │
-                     ┌────┴──────┐
-                     │   IRRd    │
-                     │(WHOIS :43)│
-                     └───────────┘
+      └─────────┘    └──┬───┬──┘    └─────────┘
+                        │   │
+                   ┌────┴┐ ┌┴───────┐
+                   │IRRd │ │ bgpq4  │
+                   │(:43)│ │(utility│
+                   └─────┘ └────────┘
 ```
 
 ISP-A and ISP-B reach the IRRd server by routing through Transit — the same way real-world operators reach public IRR servers over the Internet.
@@ -86,6 +86,7 @@ Three ASes is the minimum needed to demonstrate transit filtering: a transit pro
 | ISP-B | AS200 | Peer; will later attempt an unauthorized announcement | 203.0.113.0/24 (own); later tries 198.51.100.0/24 |
 | Transit | AS300 | Transit provider; applies IRR-based prefix filters | 100.64.0.0/24 |
 | IRRd | — | IRR database server (PostgreSQL + Redis + IRRd in a single container) | — |
+| bgpq4 | — | Utility container for running bgpq4 queries against IRRd | — |
 
 ### Interconnect Addressing
 
@@ -96,12 +97,15 @@ Each link uses a /31 point-to-point subnet from the 10.0.0.0/24 range:
 | ISP-A – Transit | as100 eth1 | 10.0.0.0/31 | as300 eth1 | 10.0.0.1/31 |
 | ISP-B – Transit | as200 eth1 | 10.0.0.2/31 | as300 eth2 | 10.0.0.3/31 |
 | IRRd – Transit  | irrd eth1  | 10.0.0.4/31 | as300 eth3 | 10.0.0.5/31 |
+| bgpq4 – Transit | bgpq4 eth1 | 10.0.0.6/31 | as300 eth4 | 10.0.0.7/31 |
 
-Transit (AS300) announces the IRRd link subnet (10.0.0.4/31) into BGP so that ISP-A and ISP-B learn a route to the IRRd server. This means bgpq4 can run from any router in the topology and query IRRd at 10.0.0.4.
+Transit (AS300) announces the IRRd link subnet (10.0.0.4/31) into BGP so that ISP-A and ISP-B learn a route to the IRRd server. The bgpq4 utility container is connected to Transit's network on its own /31 link and reaches IRRd through Transit's forwarding. This keeps bgpq4 inside the Containerlab topology — no software needs to be installed on the host.
 
 ### Design Notes
 
 The IRRd server runs PostgreSQL, Redis, and IRRd together in a single "all-in-one" container. Bundling multiple services into one container is not the recommended Docker pattern for production, but it is pragmatic for a lab: it keeps the Containerlab topology file simple (one node instead of three) and lets a single `containerlab deploy` command bring up the entire environment. In production, IRRd, PostgreSQL, and Redis would each run as separate services.
+
+The bgpq4 utility container is a lightweight Debian container with the `bgpq4` package installed. It is connected to Transit's network so it can reach the IRRd server over a Layer 3 path, similar to how a network management station on an operator's network would query public IRR servers. Running bgpq4 inside the topology means everything the lab needs is self-contained — no additional software needs to be installed on the host machine.
 
 ## Building the IRRd Container Image
 
@@ -512,39 +516,42 @@ This confirms that IRRd has loaded the data and is serving it correctly over the
 
 With a working IRRd server full of RPSL objects, we can now do what real network operators do every day: use [bgpq4](https://github.com/bgp/bgpq4) to query the registry and automatically generate router prefix-list configurations. This is the step where IRR data becomes actionable — bgpq4 reads the registry, finds which prefixes each AS is authorized to announce, and produces configuration snippets that FRR can apply directly.
 
-### Installing bgpq4
+### Building the bgpq4 Utility Container
 
-bgpq4 is available in most Linux distributions' package repositories. On Debian or Ubuntu:
+Rather than installing bgpq4 on the host, we will run it inside a lightweight utility container that is part of the Containerlab topology. This keeps the entire lab self-contained — everything runs with `containerlab deploy`.
 
-```bash
-$ sudo apt install bgpq4
+The Dockerfile is minimal. It installs bgpq4 from Debian's package repository along with basic networking tools, and uses `sleep infinity` to keep the container running. Create the file *irrd-lab/Dockerfile.bgpq4*:
+
+```dockerfile
+# Utility container with bgpq4 for querying IRR servers
+# Used as a network-attached tool container in the Containerlab topology
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bgpq4 \
+        iproute2 \
+        iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+CMD ["sleep", "infinity"]
 ```
 
-If your distribution does not package bgpq4, you can build it from the [GitHub repository](https://github.com/bgp/bgpq4):
+Build the image:
 
 ```bash
-$ git clone https://github.com/bgp/bgpq4.git
-$ cd bgpq4
-$ ./bootstrap   # if building from git
-$ ./configure
-$ make
-$ sudo make install
+$ cd irrd-lab
+$ docker build -t bgpq4-utils -f Dockerfile.bgpq4 .
 ```
 
-You can also run bgpq4 from a container image without installing anything on your host:
-
-```bash
-$ docker run --rm --network host ghcr.io/bgp/bgpq4:latest -h 10.0.0.4 -S LABRIR AS100
-```
-
-For this post, I assume bgpq4 is installed on the host. The commands work the same way regardless of how you install it.
+The bgpq4 container will be connected to Transit's network in the Containerlab topology, giving it a Layer 3 path to the IRRd server. We will run bgpq4 commands inside this container using `docker exec`.
 
 ### Generating FRR Prefix Filters
 
-bgpq4's default output format is Cisco IOS style, which FRR also accepts. To generate a prefix-list for the routes AS100 is authorized to announce, we query our lab IRRd server and use the AS-ISP-A *as-set* as the query target. The `-h` flag points bgpq4 to our IRRd server instead of the default public server (rr.ntt.net), and `-S` selects the LABRIR source:
+bgpq4's default output format is Cisco IOS style, which FRR also accepts. To generate a prefix-list for the routes AS100 is authorized to announce, we query our lab IRRd server and use the AS-ISP-A *as-set* as the query target. The `-h` flag points bgpq4 to our IRRd server instead of the default public server (rr.ntt.net), and `-S` selects the LABRIR source. We run the command inside the bgpq4 utility container using `docker exec`:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
 ```
 
 Expected output:
@@ -557,7 +564,7 @@ ip prefix-list AS100-IN permit 198.51.100.0/24
 Now generate the prefix-list for AS200:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
 ```
 
 Expected output:
@@ -572,7 +579,7 @@ We query using the *as-set* names (AS-ISP-A, AS-ISP-B) rather than the AS number
 You can also query with the AS number directly to see the same result:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
 ```
 
 ### Understanding the Output
@@ -594,7 +601,7 @@ bgpq4 supports several useful flags for customizing the output:
 For example, JSON output for automation:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -j -l AS100-IN AS-ISP-A
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -j -l AS100-IN AS-ISP-A
 ```
 
 ```json
@@ -607,7 +614,7 @@ $ bgpq4 -h 10.0.0.4 -S LABRIR -j -l AS100-IN AS-ISP-A
 
 ### Automation Script
 
-In production, network operators typically automate filter generation. They run bgpq4 on a schedule (often via cron), generate updated prefix-lists from the IRR, and push them to their routers. We can demonstrate this workflow with a simple shell script.
+In production, network operators typically automate filter generation. They run bgpq4 on a schedule (often via cron), generate updated prefix-lists from the IRR, and push them to their routers. We can demonstrate this workflow with a simple shell script that runs bgpq4 inside the utility container and applies the resulting filters to AS300.
 
 Create the file *irrd-lab/generate-filters.sh*:
 
@@ -618,17 +625,18 @@ set -euo pipefail
 IRRD_HOST="10.0.0.4"
 IRRD_SOURCE="LABRIR"
 TRANSIT_CONTAINER="clab-bgplab-as300"
+BGPQ4_CONTAINER="clab-bgplab-bgpq4"
 
 echo "=== Generating IRR-based prefix filters for AS300 ==="
 
 # Generate prefix-list for AS100 (ISP-A)
 echo "Querying IRRd for AS100 authorized prefixes..."
-AS100_FILTER=$(bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS100-IN AS-ISP-A)
+AS100_FILTER=$(docker exec "$BGPQ4_CONTAINER" bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS100-IN AS-ISP-A)
 echo "$AS100_FILTER"
 
 # Generate prefix-list for AS200 (ISP-B)
 echo "Querying IRRd for AS200 authorized prefixes..."
-AS200_FILTER=$(bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS200-IN AS-ISP-B)
+AS200_FILTER=$(docker exec "$BGPQ4_CONTAINER" bgpq4 -h "$IRRD_HOST" -S "$IRRD_SOURCE" -l AS200-IN AS-ISP-B)
 echo "$AS200_FILTER"
 
 # Apply filters to AS300's FRR via vtysh
@@ -659,7 +667,7 @@ echo "=== Done ==="
 
 The script does three things:
 
-1. **Queries IRRd** for each peer's authorized prefixes using bgpq4 with the as-set names
+1. **Queries IRRd** by running bgpq4 inside the utility container via `docker exec`, using the as-set names to look up each peer's authorized prefixes
 2. **Generates prefix-lists and route-maps** — the prefix-lists define which prefixes are allowed, and the route-maps attach those lists to each BGP neighbor's inbound session
 3. **Applies the configuration** to AS300's running FRR instance via `docker exec ... vtysh` and performs a soft BGP reset so the new filters take effect immediately
 
@@ -673,7 +681,7 @@ We will use this script after deploying the Containerlab topology in the next se
 
 ## Building the Containerlab BGP Network
 
-With the IRRd container image built, RPSL data prepared, and bgpq4 ready to generate filters, we can now assemble everything into a single Containerlab topology. One command will bring up three FRR routers and the IRRd server, establishing a working BGP network that we can then protect with IRR-based prefix filters.
+With the IRRd container image built, RPSL data prepared, and the bgpq4 utility container ready, we can now assemble everything into a single Containerlab topology. One command will bring up three FRR routers, the IRRd server, and the bgpq4 utility container, establishing a working BGP network that we can then protect with IRR-based prefix filters.
 
 ### Containerlab Topology File
 
@@ -724,6 +732,7 @@ topology:
         - ip addr add 10.0.0.1/31 dev eth1
         - ip addr add 10.0.0.3/31 dev eth2
         - ip addr add 10.0.0.5/31 dev eth3
+        - ip addr add 10.0.0.7/31 dev eth4
 
     # ── IRRd server (PostgreSQL + Redis + IRRd) ───────────
     irrd:
@@ -733,10 +742,18 @@ topology:
         - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
       exec:
         - ip addr add 10.0.0.4/31 dev eth1
-        - ip route add 10.0.0.0/30 via 10.0.0.5
+        - ip route add 10.0.0.0/29 via 10.0.0.5
         - ip route add 198.51.100.0/24 via 10.0.0.5
         - ip route add 203.0.113.0/24 via 10.0.0.5
         - ip route add 100.64.0.0/24 via 10.0.0.5
+
+    # ── bgpq4 utility container ──────────────────────────
+    bgpq4:
+      kind: linux
+      image: bgpq4-utils
+      exec:
+        - ip addr add 10.0.0.6/31 dev eth1
+        - ip route add default via 10.0.0.7
 
   links:
     # AS100 (ISP-A) ↔ AS300 (Transit)
@@ -745,14 +762,18 @@ topology:
     - endpoints: ["as200:eth1", "as300:eth2"]
     # IRRd ↔ AS300 (Transit)
     - endpoints: ["irrd:eth1", "as300:eth3"]
+    # bgpq4 ↔ AS300 (Transit)
+    - endpoints: ["bgpq4:eth1", "as300:eth4"]
 ```
 
 A few things to note in this topology:
 
 - The three FRR nodes use the official `quay.io/frrouting/frr:10.2.1` image. The `binds:` stanzas inject the *daemons* and *frr.conf* files directly into each container at startup.
 - The `exec:` stanzas assign IP addresses to the loopback and point-to-point interfaces. FRR's *zebra* daemon picks up these addresses from the Linux kernel and makes them available for BGP to announce.
-- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-data.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all three AS prefixes via AS300.
+- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-data.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all three AS prefixes via AS300. The route to `10.0.0.0/29` covers all four point-to-point link subnets.
+- The **bgpq4 node** uses the `bgpq4-utils` image we built earlier. It has a single point-to-point link to AS300 (eth4) and a default route pointing to AS300 at 10.0.0.7. This gives it Layer 3 reachability to the IRRd server through AS300's forwarding.
 - AS300's FRR configuration includes `network 10.0.0.4/31` so that AS100 and AS200 learn routes to the IRRd subnet via BGP. This mirrors how operators in the real world reach public IRR servers like RADB — over the Internet, through their transit providers.
+- AS300 has **four** point-to-point interfaces: eth1–eth3 for the three BGP peers, and eth4 for the bgpq4 utility container.
 
 ### FRR Configuration Files
 
@@ -854,6 +875,7 @@ With all files in place, the *irrd-lab/* directory should look like this:
 ```
 irrd-lab/
 ├── Dockerfile.irrd
+├── Dockerfile.bgpq4
 ├── entrypoint.sh
 ├── irrd.yaml
 ├── lab-irr-data.rpsl
@@ -871,11 +893,12 @@ irrd-lab/
         └── frr.conf
 ```
 
-First, build the IRRd container image (if you have not already):
+First, build both container images (if you have not already):
 
 ```bash
 $ cd irrd-lab
 $ docker build -t irrd-lab -f Dockerfile.irrd .
+$ docker build -t bgpq4-utils -f Dockerfile.bgpq4 .
 ```
 
 Deploy the entire lab with a single command:
@@ -884,7 +907,7 @@ Deploy the entire lab with a single command:
 $ sudo containerlab deploy -t topology.yml
 ```
 
-This brings up all four containers: three FRR routers and the IRRd server. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
+This brings up all five containers: three FRR routers, the IRRd server, and the bgpq4 utility container. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
 
 ```bash
 $ docker logs -f clab-bgplab-irrd 2>&1 | grep -m1 "IRRd Lab Container Ready"
@@ -922,10 +945,10 @@ Now for the payoff: we will use bgpq4 to query our IRRd server, generate prefix-
 
 You can apply the filters manually or use the automation script we created earlier. Let's walk through the manual process first so you can see exactly what happens at each step.
 
-From the host machine, generate the prefix-list for AS100 by querying the IRRd server:
+Generate the prefix-list for AS100 by querying the IRRd server from the bgpq4 utility container:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
 ```
 
 ```
@@ -936,7 +959,7 @@ ip prefix-list AS100-IN permit 198.51.100.0/24
 Generate the prefix-list for AS200:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
 ```
 
 ```

@@ -1,0 +1,12 @@
+# Utility container with bgpq4 for querying IRR servers
+# Used as a network-attached tool container in the Containerlab topology
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bgpq4 \
+        iproute2 \
+        iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+CMD ["sleep", "infinity"]
