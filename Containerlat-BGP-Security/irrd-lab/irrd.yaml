@@ -1,0 +1,46 @@
+irrd:
+    database_url: 'postgresql:///irrd'
+    redis_url: 'redis://localhost'
+    piddir: /var/run/irrd/
+
+    server:
+        http:
+            interface: '127.0.0.1'
+            port: 8080
+            url: 'http://localhost:8080/'
+            workers: 1
+        whois:
+            interface: '0.0.0.0'
+            port: 43
+            max_connections: 5
+
+    auth:
+        gnupg_keyring: /var/lib/irrd/gnupg/
+        override_password: '$1$lab$3wVEBstb/LcL4FK.G22mP.'
+        set_creation:
+            COMMON:
+                prefix_required: false
+                autnum_authentication: disabled
+
+    email:
+        from: 'irrd-lab@localhost'
+        footer: ''
+        smtp: 'localhost'
+
+    log:
+        level: INFO
+
+    rpki:
+        roa_source: null
+    
+    compatibility:
+        inetnum_search_disabled: true
+
+    sources_default:
+        - LABRIR
+
+    sources:
+        LABRIR:
+            authoritative: true
+            keep_journal: true
+            authoritative_non_strict_mode_dangerous: true

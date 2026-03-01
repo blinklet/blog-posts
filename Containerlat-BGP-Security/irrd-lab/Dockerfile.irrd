@@ -1,0 +1,42 @@
+# All-in-one IRRd lab container
+# Bundles PostgreSQL, Redis, and IRRd into a single image for use
+# as a Containerlab node. Not recommended for production — this is
+# a lab convenience that trades Docker best practices for simplicity.
+
+FROM python:3.11-slim-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PGDATA=/var/lib/postgresql/data \
+    IRRD_CONFIG=/etc/irrd.yaml
+
+# Install PostgreSQL, Redis, and build dependencies for IRRd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        postgresql \
+        redis-server \
+        gnupg \
+        netcat-openbsd \
+        procps \
+        curl \
+        gcc \
+        libpq-dev \
+        python3-dev \
+        rustc \
+        cargo \
+    && pip install --no-cache-dir irrd \
+    && apt-get purge -y gcc python3-dev rustc cargo \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories for IRRd
+RUN mkdir -p /var/log/irrd /var/run/irrd /etc/irrd /var/lib/irrd/gnupg \
+    && chmod 700 /var/lib/irrd/gnupg
+
+# Copy configuration and entrypoint
+COPY irrd.yaml /etc/irrd.yaml
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Expose the WHOIS port
+EXPOSE 43
+
+ENTRYPOINT ["/entrypoint.sh"]

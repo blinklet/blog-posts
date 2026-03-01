@@ -300,3 +300,835 @@ The transit providers (AS300, AS301, AS302) represent networks with varying leve
 
 
 
+
+
+
+
+
+
+
+
+### Building the BGP Security Lab
+
+Now that we understand the topology and addressing scheme, let's build the lab. I will walk through each component: the Containerlab topology file, the FRR router configurations, the IRR database, the RPKI validator, and the scripts that tie everything together.
+
+#### Interconnect Addressing
+
+Before we look at any configuration files, we need to nail down the IP addresses used on the links between routers. The existing tables above cover each AS's prefix space and loopbacks; here I add the point-to-point and IXP peering-LAN addresses.
+
+**Point-to-point links (198.51.100.0/24):**
+
+| Link | Node A | Address A | Node B | Address B |
+|------|--------|-----------|--------|-----------|
+| AS100 – AS300 | as100 eth1 | 198.51.100.0/31 | as300 eth1 | 198.51.100.1/31 |
+| AS200 – AS302 | as200 eth1 | 198.51.100.2/31 | as302 eth1 | 198.51.100.3/31 |
+
+**IXP peering LAN (203.0.113.0/24):**
+
+| Router | Interface | IXP Address |
+|--------|-----------|-------------|
+| AS300 (Transit-1)  | eth2 | 203.0.113.1/24 |
+| AS301 (Transit-2)  | eth1 | 203.0.113.2/24 |
+| AS302 (Transit-3)  | eth2 | 203.0.113.3/24 |
+| AS500 (Upstream)    | eth1 | 203.0.113.4/24 |
+
+The IXP peering LAN is a shared Ethernet segment (a Linux bridge in Containerlab) where all four transit and upstream routers exchange BGP routes, just as they would at a real Internet Exchange Point.
+
+#### Lab Directory Structure
+
+Create a project directory and subdirectories for each component's configuration files:
+
+```bash
+$ mkdir -p bgp-security-lab/configs/{as100,as200,as300,as301,as302,as500}
+$ mkdir -p bgp-security-lab/{irr,routinator/tals}
+$ cd bgp-security-lab
+```
+
+The final directory tree will look like this:
+
+```
+bgp-security-lab/
+├── topology.yml
+├── configs/
+│   ├── as100/
+│   │   ├── daemons
+│   │   └── frr.conf
+│   ├── as200/
+│   │   ├── daemons
+│   │   └── frr.conf
+│   ├── as300/
+│   │   ├── daemons
+│   │   └── frr.conf
+│   ├── as301/
+│   │   ├── daemons
+│   │   └── frr.conf
+│   ├── as302/
+│   │   ├── daemons
+│   │   └── frr.conf
+│   └── as500/
+│       ├── daemons
+│       └── frr.conf
+├── irr/
+│   ├── server.py
+│   └── routes.db
+└── routinator/
+    ├── routinator.conf
+    ├── slurm.json
+    └── tals/          (empty directory)
+```
+
+#### Containerlab Topology File
+
+The topology file is the heart of a Containerlab lab. It describes every node, the container image each node uses, the configuration files that get bind-mounted into each container, and the links between nodes.
+
+Create the file *topology.yml* in the *bgp-security-lab/* directory:
+
+```yaml
+name: bgp-security
+
+mgmt:
+  network: mgmt-bgp
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+
+  nodes:
+
+    # ── Edge ISPs ─────────────────────────────────────────
+    as100:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as100/daemons:/etc/frr/daemons
+        - configs/as100/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 12.10.255.100/32 dev lo
+        - ip addr add 12.10.10.1/24   dev lo
+        - ip addr add 12.10.20.1/24   dev lo
+        - ip addr add 198.51.100.0/31 dev eth1
+
+    as200:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as200/daemons:/etc/frr/daemons
+        - configs/as200/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 24.71.255.200/32 dev lo
+        - ip addr add 24.71.10.1/24    dev lo
+        - ip addr add 198.51.100.2/31  dev eth1
+
+    # ── Transit providers ─────────────────────────────────
+    as300:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as300/daemons:/etc/frr/daemons
+        - configs/as300/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 66.20.255.1/32   dev lo
+        - ip addr add 66.20.10.1/24    dev lo
+        - ip addr add 198.51.100.1/31  dev eth1
+        - ip addr add 203.0.113.1/24   dev eth2
+
+    as301:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as301/daemons:/etc/frr/daemons
+        - configs/as301/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 68.30.255.2/32  dev lo
+        - ip addr add 68.30.10.1/24   dev lo
+        - ip addr add 203.0.113.2/24  dev eth1
+
+    as302:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as302/daemons:/etc/frr/daemons
+        - configs/as302/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 69.40.255.3/32   dev lo
+        - ip addr add 69.40.10.1/24    dev lo
+        - ip addr add 198.51.100.3/31  dev eth1
+        - ip addr add 203.0.113.3/24   dev eth2
+
+    # ── Upstream provider ─────────────────────────────────
+    as500:
+      kind: linux
+      image: quay.io/frrouting/frr:10.2.1
+      binds:
+        - configs/as500/daemons:/etc/frr/daemons
+        - configs/as500/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 70.50.255.4/32  dev lo
+        - ip addr add 70.50.10.1/24   dev lo
+        - ip addr add 203.0.113.4/24  dev eth1
+
+    # ── IXP (layer-2 bridge) ─────────────────────────────
+    ixp:
+      kind: bridge
+
+    # ── IRR database (mini WHOIS server) ──────────────────
+    irr:
+      kind: linux
+      image: python:3.12-alpine
+      binds:
+        - irr/server.py:/opt/server.py
+        - irr/routes.db:/opt/routes.db
+      cmd: python3 /opt/server.py
+
+    # ── RPKI Validator (Routinator) ───────────────────────
+    routinator:
+      kind: linux
+      image: nlnetlabs/routinator:latest
+      binds:
+        - routinator/routinator.conf:/home/routinator/.routinator.conf
+        - routinator/slurm.json:/etc/routinator/slurm.json
+        - routinator/tals:/home/routinator/.rpki-cache/tals
+      mgmt-ipv4: 172.20.20.31
+      cmd: >-
+        server
+        --no-rir-tals
+        --config /home/routinator/.routinator.conf
+
+  links:
+    # AS100 (victim) ↔ AS300 (transit-1)
+    - endpoints: ["as100:eth1", "as300:eth1"]
+    # AS200 (attacker) ↔ AS302 (transit-3)
+    - endpoints: ["as200:eth1", "as302:eth1"]
+    # AS300 ↔ IXP
+    - endpoints: ["as300:eth2", "ixp:eth1"]
+    # AS301 ↔ IXP
+    - endpoints: ["as301:eth1", "ixp:eth2"]
+    # AS302 ↔ IXP
+    - endpoints: ["as302:eth2", "ixp:eth3"]
+    # AS500 ↔ IXP
+    - endpoints: ["as500:eth1", "ixp:eth4"]
+```
+
+A few things worth noting in this topology file:
+
+- The `kind: linux` nodes use `binds:` to inject FRR configuration files directly into the container at startup. This is the "lab-as-code" approach — all configuration lives in the project directory alongside the topology file.
+- The `exec:` stanzas assign loopback, customer-subnet, and link addresses inside each router container at launch time. FRR's *zebra* daemon will pick up these addresses from the Linux kernel and make them available for BGP to announce.
+- The `kind: bridge` IXP node is a Linux bridge that provides a shared Ethernet segment for AS300, AS301, AS302, and AS500 to peer across — just as a real IXP peering LAN works.
+- The *irr* container uses a lightweight Python image to run a minimal WHOIS server that will serve our IRR route objects.
+- Routinator gets a fixed management IP (`172.20.20.31`) so AS500 can connect to it via the RTR protocol. The `--no-rir-tals` flag tells Routinator not to download real-world RIR data; our lab uses local ROA assertions instead.
+
+#### FRR Configuration Files
+
+Each FRR router needs two files: a *daemons* file that tells FRR which protocol daemons to start, and a *frr.conf* file that holds the routing configuration.
+
+##### Daemons File
+
+The *daemons* file is identical for every router in this lab. Create it once and copy it into each router's configuration subdirectory:
+
+```
+bgpd=yes
+zebra=yes
+```
+
+Only *bgpd* (for BGP) and *zebra* (for the kernel interface) are needed. The RPKI functionality in FRR is a module loaded by *bgpd* — it does not require a separate daemon.
+
+```bash
+$ for as in as100 as200 as300 as301 as302 as500; do
+    cp configs/as100/daemons configs/$as/daemons
+  done
+```
+
+##### AS100 — Victim
+
+AS100 is the legitimate prefix owner. It announces its /16 aggregate along with two more-specific /24 subnets to its upstream transit provider, AS300.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as100
+!
+ip route 12.10.0.0/16 Null0
+!
+router bgp 100
+ bgp router-id 12.10.255.100
+ !
+ neighbor 198.51.100.1 remote-as 300
+ neighbor 198.51.100.1 description transit-AS300
+ !
+ address-family ipv4 unicast
+  network 12.10.0.0/16
+  network 12.10.10.0/24
+  network 12.10.20.0/24
+  neighbor 198.51.100.1 activate
+ exit-address-family
+!
+```
+
+The `ip route 12.10.0.0/16 Null0` creates a blackhole static route so that BGP's `network` statement can find the /16 in the routing table. Without this route, BGP would not announce the aggregate. The two /24 subnets are already present as connected routes because we assigned their addresses to the loopback interface in the topology file's `exec:` stanza.
+
+##### AS200 — Attacker
+
+The attacker's baseline configuration only advertises its own legitimate prefix. Later, in the scenarios section, we will add the hijack announcement.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as200
+!
+ip route 24.71.0.0/16 Null0
+!
+router bgp 200
+ bgp router-id 24.71.255.200
+ !
+ neighbor 198.51.100.3 remote-as 302
+ neighbor 198.51.100.3 description transit-AS302
+ !
+ address-family ipv4 unicast
+  network 24.71.0.0/16
+  network 24.71.10.0/24
+  neighbor 198.51.100.3 activate
+ exit-address-family
+!
+```
+
+##### AS300 — Transit-1
+
+AS300 peers downstream with its customer AS100, and peers at the IXP with the other transit networks and the upstream provider. In the base configuration, it accepts all announcements from all peers and propagates them — no filtering or RPKI validation is applied yet.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as300
+!
+ip route 66.20.0.0/16 Null0
+!
+router bgp 300
+ bgp router-id 66.20.255.1
+ !
+ neighbor 198.51.100.0 remote-as 100
+ neighbor 198.51.100.0 description customer-AS100
+ neighbor 203.0.113.2  remote-as 301
+ neighbor 203.0.113.2  description peer-AS301-ixp
+ neighbor 203.0.113.3  remote-as 302
+ neighbor 203.0.113.3  description peer-AS302-ixp
+ neighbor 203.0.113.4  remote-as 500
+ neighbor 203.0.113.4  description upstream-AS500-ixp
+ !
+ address-family ipv4 unicast
+  network 66.20.0.0/16
+  network 66.20.10.0/24
+  neighbor 198.51.100.0 activate
+  neighbor 203.0.113.2  activate
+  neighbor 203.0.113.3  activate
+  neighbor 203.0.113.4  activate
+ exit-address-family
+!
+```
+
+##### AS301 — Transit-2
+
+AS301 is a transit-only network in this lab. It has no direct customer connections — it peers at the IXP and propagates routes.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as301
+!
+ip route 68.30.0.0/16 Null0
+!
+router bgp 301
+ bgp router-id 68.30.255.2
+ !
+ neighbor 203.0.113.1 remote-as 300
+ neighbor 203.0.113.1 description peer-AS300-ixp
+ neighbor 203.0.113.3 remote-as 302
+ neighbor 203.0.113.3 description peer-AS302-ixp
+ neighbor 203.0.113.4 remote-as 500
+ neighbor 203.0.113.4 description upstream-AS500-ixp
+ !
+ address-family ipv4 unicast
+  network 68.30.0.0/16
+  network 68.30.10.0/24
+  neighbor 203.0.113.1 activate
+  neighbor 203.0.113.3 activate
+  neighbor 203.0.113.4 activate
+ exit-address-family
+!
+```
+
+##### AS302 — Transit-3
+
+AS302 peers downstream with AS200 (the attacker) and upstream at the IXP. Like the other transit networks, it does not apply filtering or RPKI validation in the base configuration.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as302
+!
+ip route 69.40.0.0/16 Null0
+!
+router bgp 302
+ bgp router-id 69.40.255.3
+ !
+ neighbor 198.51.100.2 remote-as 200
+ neighbor 198.51.100.2 description customer-AS200
+ neighbor 203.0.113.1  remote-as 300
+ neighbor 203.0.113.1  description peer-AS300-ixp
+ neighbor 203.0.113.2  remote-as 301
+ neighbor 203.0.113.2  description peer-AS301-ixp
+ neighbor 203.0.113.4  remote-as 500
+ neighbor 203.0.113.4  description upstream-AS500-ixp
+ !
+ address-family ipv4 unicast
+  network 69.40.0.0/16
+  network 69.40.10.0/24
+  neighbor 198.51.100.2 activate
+  neighbor 203.0.113.1  activate
+  neighbor 203.0.113.2  activate
+  neighbor 203.0.113.4  activate
+ exit-address-family
+!
+```
+
+##### AS500 — Upstream Provider (with RPKI Validation)
+
+AS500 is the most interesting configuration in the lab. In addition to standard BGP peering, it connects to Routinator via the RTR protocol and uses RPKI validation state to influence route selection.
+
+```
+frr version 10.2
+frr defaults traditional
+hostname as500
+!
+ip route 70.50.0.0/16 Null0
+!
+rpki
+ rpki cache 172.20.20.31 3323 preference 1
+exit
+!
+route-map RPKI-FILTER permit 10
+ match rpki valid
+ set local-preference 200
+!
+route-map RPKI-FILTER permit 20
+ match rpki notfound
+ set local-preference 100
+!
+route-map RPKI-FILTER deny 30
+ match rpki invalid
+!
+router bgp 500
+ bgp router-id 70.50.255.4
+ !
+ neighbor 203.0.113.1 remote-as 300
+ neighbor 203.0.113.1 description peer-AS300-ixp
+ neighbor 203.0.113.2 remote-as 301
+ neighbor 203.0.113.2 description peer-AS301-ixp
+ neighbor 203.0.113.3 remote-as 302
+ neighbor 203.0.113.3 description peer-AS302-ixp
+ !
+ address-family ipv4 unicast
+  network 70.50.0.0/16
+  network 70.50.10.0/24
+  neighbor 203.0.113.1 activate
+  neighbor 203.0.113.1 route-map RPKI-FILTER in
+  neighbor 203.0.113.2 activate
+  neighbor 203.0.113.2 route-map RPKI-FILTER in
+  neighbor 203.0.113.3 activate
+  neighbor 203.0.113.3 route-map RPKI-FILTER in
+ exit-address-family
+!
+```
+
+The `rpki` block tells FRR where to find the RTR server — in our case, Routinator at management IP 172.20.20.31. The three `route-map` entries implement the standard RPKI route policy:
+
+- **Valid** routes (ROA matches prefix and origin AS) get `local-preference 200`, making them the preferred path.
+- **NotFound** routes (no ROA exists for this prefix) get `local-preference 100`. They are accepted but deprioritized compared to Valid routes.
+- **Invalid** routes (a ROA exists but the origin AS or prefix length does not match) are dropped by the `deny 30` entry.
+
+This route-map is applied inbound on every IXP peer with the `route-map RPKI-FILTER in` statement.
+
+#### Setting Up the IRR Database
+
+In the Lab Architecture section, I described the RIR Database container as a simplified Internet Routing Registry. We will implement it as a lightweight WHOIS server using a short Python script. It won't replicate the full complexity of production IRRd instances, but it does serve RPSL (Routing Policy Specification Language) objects that are structurally identical to what you would find in a real IRR like RADB, RIPE, or ARIN's IRR.
+
+##### IRR WHOIS Server
+
+Create the file *irr/server.py*:
+
+```python
+#!/usr/bin/env python3
+"""Minimal WHOIS server for the lab's IRR database."""
+import socketserver
+
+with open("/opt/routes.db") as f:
+    DB_TEXT = f.read()
+OBJECTS = [obj.strip() for obj in DB_TEXT.split("\n\n") if obj.strip()]
+
+
+class WhoisHandler(socketserver.StreamRequestHandler):
+    def handle(self):
+        query = self.rfile.readline().decode().strip().lower()
+        results = [obj for obj in OBJECTS if query in obj.lower()]
+        if results:
+            self.wfile.write(("\n\n".join(results) + "\n").encode())
+        else:
+            self.wfile.write(b"% No matching objects found\n")
+
+
+if __name__ == "__main__":
+    server = socketserver.TCPServer(("0.0.0.0", 43), WhoisHandler)
+    print("IRR WHOIS server listening on port 43")
+    server.serve_forever()
+```
+
+The server listens on TCP port 43 (the standard WHOIS port), reads a one-line query from the client, and returns every RPSL object whose text matches the query string. This is the same basic behavior as a real WHOIS server.
+
+##### IRR Route Objects
+
+Create the file *irr/routes.db* with RPSL objects for every AS in the lab:
+
+```
+aut-num:  AS100
+as-name:  VICTIM-NET
+descr:    Victim ISP – legitimate prefix holder
+source:   LABRIR
+
+route:    12.10.0.0/16
+descr:    Victim aggregate
+origin:   AS100
+source:   LABRIR
+
+route:    12.10.10.0/24
+descr:    Victim customer subnet A
+origin:   AS100
+source:   LABRIR
+
+route:    12.10.20.0/24
+descr:    Victim customer subnet B
+origin:   AS100
+source:   LABRIR
+
+aut-num:  AS200
+as-name:  ATTACKER-NET
+descr:    Attacker ISP
+source:   LABRIR
+
+route:    24.71.0.0/16
+descr:    Attacker aggregate
+origin:   AS200
+source:   LABRIR
+
+route:    24.71.10.0/24
+descr:    Attacker customer subnet
+origin:   AS200
+source:   LABRIR
+
+aut-num:  AS300
+as-name:  TRANSIT1-NET
+descr:    Transit Provider 1
+source:   LABRIR
+
+route:    66.20.0.0/16
+descr:    Transit-1 aggregate
+origin:   AS300
+source:   LABRIR
+
+aut-num:  AS301
+as-name:  TRANSIT2-NET
+descr:    Transit Provider 2
+source:   LABRIR
+
+route:    68.30.0.0/16
+descr:    Transit-2 aggregate
+origin:   AS301
+source:   LABRIR
+
+aut-num:  AS302
+as-name:  TRANSIT3-NET
+descr:    Transit Provider 3
+source:   LABRIR
+
+route:    69.40.0.0/16
+descr:    Transit-3 aggregate
+origin:   AS302
+source:   LABRIR
+
+aut-num:  AS500
+as-name:  UPSTREAM-NET
+descr:    Upstream Provider
+source:   LABRIR
+
+route:    70.50.0.0/16
+descr:    Upstream aggregate
+origin:   AS500
+source:   LABRIR
+```
+
+Notice that the only route objects with `origin: AS100` are the 12.10.0.0/16 aggregate and the two /24 subnets. There is **no** route object authorizing AS200 to announce anything in the 12.10.0.0/16 range. If a network operator queries this IRR before accepting routes from AS200, they will find no authorization for that prefix and can build a filter to reject it.
+
+##### How Operators Use IRR Data in Practice
+
+In the real world, network operators query IRR databases using tools like *[bgpq4](https://github.com/bgp/bgpq4)*. For example, to generate an FRR prefix-list for routes that AS200 is authorized to announce, an operator would run:
+
+```bash
+$ bgpq4 -F "ip prefix-list AS200-FILTER permit %n/%l le %L\n" AS200
+```
+
+Which would produce output like:
+
+```
+ip prefix-list AS200-FILTER permit 24.71.0.0/16 le 24
+ip prefix-list AS200-FILTER permit 24.71.10.0/24 le 24
+```
+
+The operator then applies this prefix-list to the inbound BGP session from AS200. Any announcement not covered by the filter — such as an attempt to announce 12.10.10.0/24 — would be rejected. We will demonstrate IRR-based prefix filtering in the scenarios section later.
+
+For now, our IRR database container is populated and ready to be queried. After the lab is deployed, you can test it directly:
+
+```bash
+$ docker exec clab-bgp-security-as300 sh -c \
+    'echo "AS200" | nc clab-bgp-security-irr 43'
+```
+
+This should return the `aut-num` and `route` objects for AS200.
+
+#### RPKI Validator Setup
+
+For the RPKI validator, we use [Routinator](https://routinator.docs.nlnetlabs.nl/) from NLnet Labs. In production, Routinator fetches ROA data from the five RIR Trust Anchors over the Internet, validates the cryptographic chain, and serves the results to routers. In our lab, we don't connect to the real RPKI infrastructure. Instead, we use *SLURM (Simplified Local Internet Number Resource Management with the RPKI)*, standardized in [RFC 8416](https://www.rfc-editor.org/rfc/rfc8416), to define ROA assertions locally.
+
+> **Note:** For a more realistic setup, you could run [Krill](https://krill.docs.nlnetlabs.nl/) — an open-source RPKI Certificate Authority from NLnet Labs — alongside Routinator. Krill would act as a local mini-RIR, issuing resource certificates and signing ROAs. Routinator would then fetch and validate those ROAs through the standard RPKI trust chain. I use SLURM here because it achieves the same result for lab scenarios with significantly less setup complexity.
+
+##### SLURM File — Local ROA Assertions
+
+Create the file *routinator/slurm.json*:
+
+```json
+{
+  "slurmVersion": 1,
+  "validationOutputFilters": {
+    "prefixFilters": [],
+    "bgpsecFilters": []
+  },
+  "locallyAddedAssertions": {
+    "prefixAssertions": [
+      {
+        "asn": 100,
+        "prefix": "12.10.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Victim AS100 – authorized for /16 through /24"
+      },
+      {
+        "asn": 200,
+        "prefix": "24.71.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Attacker AS200 – own prefix only"
+      },
+      {
+        "asn": 300,
+        "prefix": "66.20.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Transit-1 AS300"
+      },
+      {
+        "asn": 301,
+        "prefix": "68.30.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Transit-2 AS301"
+      },
+      {
+        "asn": 302,
+        "prefix": "69.40.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Transit-3 AS302"
+      },
+      {
+        "asn": 500,
+        "prefix": "70.50.0.0/16",
+        "maxPrefixLength": 24,
+        "comment": "Upstream AS500"
+      }
+    ],
+    "bgpsecAssertions": []
+  }
+}
+```
+
+Each `prefixAssertions` entry is the equivalent of a ROA (Route Origin Authorization). The critical entry for our attack scenario is:
+
+```json
+{"asn": 100, "prefix": "12.10.0.0/16", "maxPrefixLength": 24}
+```
+
+This says: *only AS100 is authorized to announce 12.10.0.0/16 or any more-specific prefix up to a /24.* When AS200 later announces `12.10.10.0/24` — which falls inside that /16 — Routinator will flag it as **Invalid** because AS200 is not the authorized origin for that prefix block.
+
+Notice that AS200 does have a valid ROA for its own prefix (24.71.0.0/16). Only its fraudulent announcement of the victim's prefix will be flagged.
+
+##### Routinator Configuration
+
+Create the file *routinator/routinator.conf*:
+
+```toml
+exceptions = ["/etc/routinator/slurm.json"]
+rtr-listen = ["0.0.0.0:3323"]
+http-listen = ["0.0.0.0:8323"]
+log-level = "info"
+```
+
+This tells Routinator to:
+
+- Load our SLURM file and use its ROA assertions
+- Serve the RTR protocol on port 3323 (where AS500's FRR will connect)
+- Serve the HTTP API and dashboard on port 8323 (useful for inspecting validation state)
+
+##### How It All Connects
+
+When the lab is running, the RPKI data flows through the following chain:
+
+1. **Routinator** starts, finds no RIR TAL files (because we passed `--no-rir-tals`), but loads the SLURM file and builds a Validated ROA Payload (VRP) list from our local assertions.
+2. **AS500's FRR** connects to Routinator's RTR server at 172.20.20.31:3323 and downloads the VRP list.
+3. When a **BGP announcement** arrives at AS500, FRR checks the prefix and origin AS against the VRP list and assigns a validation state: *Valid*, *Invalid*, or *NotFound*.
+4. The **RPKI-FILTER route-map** on AS500 uses this state to accept, deprioritize, or reject the route.
+
+#### Deploying the Lab
+
+With all configuration files in place, deploy the topology from the *bgp-security-lab/* directory:
+
+```bash
+$ sudo containerlab deploy -t topology.yml
+```
+
+You will see Containerlab pull container images (on first run), create the containers, set up the network links, and execute the `exec:` commands. When the deployment finishes, you should see a summary table listing all nodes.
+
+Verify that every container is in the `running` state:
+
+```bash
+$ sudo containerlab inspect -t topology.yml
+```
+
+You should see output similar to:
+
+```
+╭───────────────────────────────┬────────────────────────────────┬─────────┬──────────────────╮
+│            Name               │          Kind/Image            │  State  │  IPv4 Address    │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as100       │ linux                          │ running │ 172.20.20.11     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as200       │ linux                          │ running │ 172.20.20.12     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as300       │ linux                          │ running │ 172.20.20.13     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as301       │ linux                          │ running │ 172.20.20.14     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as302       │ linux                          │ running │ 172.20.20.15     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-as500       │ linux                          │ running │ 172.20.20.16     │
+│                               │ quay.io/frrouting/frr:10.2.1  │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-irr         │ linux                          │ running │ 172.20.20.20     │
+│                               │ python:3.12-alpine             │         │                  │
+├───────────────────────────────┼────────────────────────────────┼─────────┼──────────────────┤
+│ clab-bgp-security-routinator  │ linux                          │ running │ 172.20.20.31     │
+│                               │ nlnetlabs/routinator:latest    │         │                  │
+╰───────────────────────────────┴────────────────────────────────┴─────────┴──────────────────╯
+```
+
+#### Verifying the Base Configuration
+
+Before running any attack scenarios, verify that the base lab is operating correctly. Three things need to be true:
+
+1. BGP sessions are established between all peers
+2. Each AS has learned the expected prefixes from its neighbors
+3. AS500 is connected to Routinator and RPKI validation is active
+
+##### Check BGP Sessions
+
+Verify that AS100's BGP session to AS300 is established:
+
+```bash
+$ docker exec clab-bgp-security-as100 vtysh -c "show bgp summary"
+```
+
+You should see a line for the AS300 peer with a state showing the number of received prefixes (not a state like `Active` or `Idle`):
+
+```
+IPv4 Unicast Summary:
+Neighbor        V    AS   MsgRcvd  MsgSent  TblVer   InQ  OutQ  Up/Down  State/PfxRcd
+198.51.100.1    4   300        42       38       0     0     0 00:05:12           12
+```
+
+The `State/PfxRcd` column should show a number (the count of prefixes received), not a connection state like `Active`. If you see `Active` or `Connect`, the BGP session has not established — check that the link addresses are correct and that FRR has started.
+
+Repeat for AS500 to confirm it has sessions with all three IXP peers:
+
+```bash
+$ docker exec clab-bgp-security-as500 vtysh -c "show bgp summary"
+```
+
+##### Check Routing Tables
+
+Verify that AS500 has learned the victim's prefix:
+
+```bash
+$ docker exec clab-bgp-security-as500 vtysh -c "show bgp ipv4 unicast 12.10.0.0/16"
+```
+
+You should see a BGP table entry showing the path through AS300 and AS100:
+
+```
+BGP routing table entry for 12.10.0.0/16, version 5
+Paths: (1 available, best #1, table default)
+  Advertised to non peer-group peers:
+  203.0.113.1 203.0.113.2 203.0.113.3
+  300 100
+    203.0.113.1 from 203.0.113.1 (66.20.255.1)
+      Origin IGP, valid, external, best (First path received)
+      Last update: Mon Feb 28 10:15:42 2026
+```
+
+##### Check RPKI Validation
+
+Verify that AS500 has an active RTR connection to Routinator:
+
+```bash
+$ docker exec clab-bgp-security-as500 vtysh -c "show rpki cache-connection"
+```
+
+You should see the connection to 172.20.20.31 in the `connected` state:
+
+```
+Connected to group 1
+rpki tcp cache 172.20.20.31 3323 pref 1
+```
+
+Check the RPKI validation state of the victim's prefix on AS500:
+
+```bash
+$ docker exec clab-bgp-security-as500 vtysh -c "show rpki prefix 12.10.0.0/16"
+```
+
+This should show that AS100 is the authorized origin:
+
+```
+Prefix                                   Prefix Length  Origin-AS
+12.10.0.0/16                             16 - 24        100
+```
+
+You can also verify the Routinator dashboard and API from the host:
+
+```bash
+$ curl -s http://172.20.20.31:8323/api/v1/status | python3 -m json.tool
+```
+
+And list all Validated ROA Payloads (VRPs):
+
+```bash
+$ curl -s http://172.20.20.31:8323/api/v1/vrps
+```
+
+This should return JSON containing all six ROAs from our SLURM file.
+
+With all BGP sessions established, prefixes propagating correctly, and RPKI validation active on AS500, the lab is ready. In the next section, we will run the attack scenarios: first demonstrating a successful hijack when defenses are absent, then showing how IRR-based prefix filtering and RPKI validation each block the attack.
