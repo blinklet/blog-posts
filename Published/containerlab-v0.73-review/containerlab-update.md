@@ -4,12 +4,6 @@ I first [reviewed Containerlab in 2021](https://www.brianlinkletter.com/2021/05/
 
 ![](Images/vscode-clab-070-splash.png)
 
-Back in 2021, Containerlab was a command-line tool that required `sudo` for every operation. It required the user to create shell scripts to configure nodes at startup. It's `graph` command provided only basic visualization of lab topologies. Users also needed to be very familiar with Docker commands and Linux networking commands to get the most out of the tool. 
-
-Today, Containerlab offers rootless operation, declarative node configuration, a full-featured VSCode extension with a graphical topology editor, multiple graph export formats, integrated packet capture, and a thriving community lab catalog. This post will walk through the most significant improvements and show you how the Containerlab experience has changed over the past five years.
-
-<!--more-->
-
 ### What is Containerlab?
 
 [Containerlab](https://containerlab.dev) is an open-source, container-based network emulation platform that lets you build, run, and tear down realistic network topologies using simple, declarative YAML files. It uses lightweight containers and Linux networking to interconnect routers, switches, hosts, and tools into reproducible labs that behave like real networks. It also supports virtual machines, so it can run many commercial router images.
@@ -19,6 +13,10 @@ Containerlab integrates cleanly with automation tools such as Ansible, Nornir, a
 The project was originally developed by [Nokia](https://www.nokia.com/) engineers and is hosted on [GitHub](https://github.com/srl-labs/containerlab). It has grown into one of the most widely-used open-source network lab platforms, with an active community on [Discord](https://discord.gg/vAyddtaEV9) and a [dedicated documentation site](https://containerlab.dev).
 
 ### What's Changed Since 2021
+
+Back in 2021, Containerlab was a command-line tool that required `sudo` for every operation. It required the user to create shell scripts to configure nodes at startup. Users also needed to be very familiar with Docker commands and Linux networking commands to get the most out of the tool. 
+
+Today, Containerlab offers rootless operation, declarative node configuration, a full-featured VSCode extension with a graphical topology editor, multiple graph export formats, integrated packet capture, and a thriving community lab catalog. This post will walk through the most significant improvements and show you how the Containerlab experience has changed over the past five years.
 
 Here are the most important changes to Containerlab over the past five years that will affect your day-to-day experience. 
 
@@ -71,8 +69,6 @@ The _clab exec_ command is similar to _docker exec_, but it allows a user to run
 
 Containerlab [added the `kind: bridge` node type](https://containerlab.dev/rn/0.43/#execute-on-host), which creates a Linux bridge that acts as a shared Ethernet segment. This is useful for simulating scenarios like Internet Exchange Points (IXPs) where multiple routers peer over a common LAN.
 
-In 2021, creating a shared segment required the user to configure external Linux bridges. Now, it is a first-class feature.
-
 #### Integrated Link Impairment Commands
 
 In 2021, users who wanted to cause impairments on network links had to use Linux IP networking commands. Today, Containerlab offers integrated CLI commands that enable users to emulate [network link impairments](https://containerlab.dev/manual/impairments/).
@@ -89,21 +85,21 @@ The lab examples make it easy to explore different network scenarios and often s
 
 The list of [supported network operating systems](https://containerlab.dev/manual/kinds/) has grown significantly since 2021. Containerlab now has first-class `kind:` support for dozens of platforms, including:
 
-- **Nokia**: SR Linux, SR OS (SR-SIM and vSIM)
-- **Arista**: cEOS, vEOS
-- **Cisco**: XRd, XRv9k, XRv, CSR1000v, Nexus 9000v, 8000, c8000v, IOL, VIOS, ASAv, FTDv, SD-WAN, Catalyst 9000v
-- **Juniper**: cRPD, vMX, vQFX, vSRX, vJunos, cJunos
-- **Others**: Cumulus VX, SONiC, MikroTik RouterOS, VyOS, OpenWRT, Ostinato, and more
+- *Nokia*: SR Linux, SR OS (SR-SIM and vSIM)
+- *Arista*: cEOS, vEOS
+- *Cisco*: XRd, XRv9k, XRv, CSR1000v, Nexus 9000v, 8000, c8000v, IOL, VIOS, ASAv, FTDv, SD-WAN, Catalyst 9000v
+- *Juniper*: cRPD, vMX, vQFX, vSRX, vJunos, cJunos
+- *Others*: Cumulus VX, SONiC, MikroTik RouterOS, VyOS, OpenWRT, Ostinato, and more
 
 When a device has first-class `kind:` support, Containerlab handles vendor-specific startup requirements (interface naming, management network setup, license handling, etc.) automatically. This is a big improvement over the generic `kind: linux` approach, which requires users to handle those details themselves.
 
 ##### Open-Source Router Support
 
-For open-source routers, Containerlab still operates the same way it did in 2021, so users of open-source routing software like [FRR](https://frrouting.org/) still have to manage some setup commands, themselves. It still provides the `kind: linux` node type, which enables users to run open-source routing stacks like FRR, [BIRD](https://bird.network.cz/), [GoBGP](https://osrg.github.io/gobgp/), and [OpenBGPD](https://www.openbgpd.org/) in any Linux container. 
+For open-source routers, Containerlab still operates the same way it did in 2021. Users of open-source routing software like [FRR](https://frrouting.org/) still have to manage some setup commands, themselves. It still provides the `kind: linux` node type, which enables users to run open-source routing stacks like FRR, [BIRD](https://bird.network.cz/), [GoBGP](https://osrg.github.io/gobgp/), and [OpenBGPD](https://www.openbgpd.org/) in any Linux container. 
 
 The good news is that the new `exec:` command in the topology file, makes it easier to set up and configure open-source routers based on Linux containers.
 
-#### The _clab graph_ CLI Command
+#### Improved Visualization Export
 
 The `clab graph` CLI command has been improved and now supports multiple output formats: HTML, draw.io, Mermaid, Graphviz.
 
@@ -140,6 +136,8 @@ In 2021, capturing packets required a multi-step process involving `ip netns exe
 
 The VSCode extension now provides integrated packet capture. Wireshark runs in a container and streams its GUI directly into a VSCode tab via VNC. No local Wireshark installation is needed. You can start a capture by right-clicking any interface in the tree view and selecting "Start capture." Capture files can be saved to disk from within the Wireshark session.
 
+![Wireshark capture from interface](Images/vscode-clab-060-edgeshark.png)
+
 ##### Draw.io Integration
 
 The extension can generate [draw.io](https://draw.io/) diagrams from your topology. The diagram opens inside a Draw.io editor in VSCode where you can further edit it and save it as a file. This is useful for documentation and presentations.
@@ -150,30 +148,19 @@ To install the extension, open the Extensions tab in VSCode and search for "Cont
 
 #### Other Ecosystem Improvements
 
-Beyond the VSCode extension and improved graph command, several other additions have improved the Containerlab experience.
+Several other community contributions have improved the Containerlab experience.
 
 ##### Community Lab Catalog
 
 The Containerlab community maintains a catalog of ready-made lab topologies at [clabs.netdevops.me](https://clabs.netdevops.me/). These community-contributed labs cover a wide range of scenarios — from basic routing protocols to complex multi-vendor data center fabrics. You can deploy many of these labs directly from the catalog, which makes it easy to explore unfamiliar technologies without building a topology from scratch.
 
-##### Edgeshark Integration
-
-[Edgeshark](https://edgeshark.siemens.io/) is a container networking visualization and diagnostic tool that Containerlab integrates with for packet capture. The Containerlab VSCode extension uses Edgeshark's capture backend for both its integrated Wireshark VNC mode and the local Wireshark mode.
-
-![Wireshark capture from interface](Images/vscode-clab-060-edgeshark.png)
-
 ##### Clabernetes: Containerlab on Kubernetes
 
-[Clabernetes](https://containerlab.dev/manual/clabernetes/) is a newer project that lets you run Containerlab topologies on Kubernetes clusters. This enables scaling labs across multiple nodes in a cluster and running labs in cloud environments. While this is beyond what most individual users need, it shows how far the Containerlab ecosystem has grown.
-
-##### Link Impairments
-
-Containerlab can now simulate [network impairments](https://containerlab.dev/manual/impairments/) (delay, jitter, packet loss, corruption) on links between nodes. This is useful for testing how applications and protocols behave under degraded network conditions.
-
+[Clabernetes](https://containerlab.dev/manual/clabernetes/) is a newer project that lets you run Containerlab topologies on Kubernetes clusters. This enables users to scale large labs across multiple nodes in a cluster and run labs in cloud environments. While this is beyond what most individual users need, it shows how far the Containerlab ecosystem has grown.
 
 ### Install Containerlab
 
-The Containerlab project offers [multiple install methods](https://containerlab.dev/install/). The two most common approaches are the package repository and the quick-install script.
+The Containerlab project offers [multiple install methods](https://containerlab.dev/install/). I chose to install Containerlab from its package repository.
 
 #### Prerequisites
 
