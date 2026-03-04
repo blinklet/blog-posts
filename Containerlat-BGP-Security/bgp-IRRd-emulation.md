@@ -66,12 +66,12 @@ The lab uses three autonomous systems connected in a hub-and-spoke topology, wit
       ┌─────────┐    ┌──────────┐    ┌─────────┐
       │  ISP-A  ├────┤ Transit  ├────┤  ISP-B  │
       │  AS100  │    │  AS300   │    │  AS200  │
-      └─────────┘    └──┬───┬──┘    └─────────┘
-                        │   │
-                   ┌────┴┐ ┌┴───────┐
-                   │IRRd │ │ bgpq4  │
-                   │(:43)│ │(utility│
-                   └─────┘ └────────┘
+      └─────────┘    └──┬────┬──┘    └─────────┘
+                        │    │
+              ┌─────────┴┐  ┌┴────────┐
+              │   IRRd   │  │  bgpq4  │
+              │(WHOIS:43)│  │(utility)│
+              └──────────┘  └─────────┘
 ```
 
 ISP-A and ISP-B reach the IRRd server by routing through Transit — the same way real-world operators reach public IRR servers over the Internet.
