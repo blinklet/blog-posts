@@ -1,0 +1,10 @@
+{
+  "objects": [
+    {
+      "object_text": "% Lab IRR data for the BGP prefix filtering lab\n% Source: LABRIR\n% This file is loaded into IRRd using irrd_load_database\n\naut-num:        AS100\nas-name:        ISP-A\ndescr:          ISP-A - Legitimate prefix holder\nadmin-c:        LAB-ADMIN\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\naut-num:        AS200\nas-name:        ISP-B\ndescr:          ISP-B - Peer that will attempt unauthorized announcement\nadmin-c:        LAB-ADMIN\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\nas-set:         AS-ISP-A\ndescr:          AS set for ISP-A and its customers\nmembers:        AS100\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\nas-set:         AS-ISP-B\ndescr:          AS set for ISP-B and its customers\nmembers:        AS200\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\nroute:          198.51.100.0/24\ndescr:          ISP-A prefix\norigin:         AS100\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\nroute:          203.0.113.0/24\ndescr:          ISP-B prefix\norigin:         AS200\nmnt-by:         LAB-MNT\nsource:         LABRIR\n\n"
+    }
+  ],
+  "passwords": [
+    "mypassword"
+  ]
+}

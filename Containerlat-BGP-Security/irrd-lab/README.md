@@ -41,3 +41,24 @@ curl 'http://localhost:8080/v1/whois/?q=AS300'
 
 curl 'http://localhost:8080/v1/whois/?q=AS300'
 
+cat > update.json <<'EOF'
+{
+  "objects": [
+    {
+      "object_text": "aut-num:        AS200\nas-name:        ISP-B\ndescr:          ISP-B - Peer that will attempt unauthorized announcement\nadmin-c:        LAB-ADMIN\ntech-c:         LAB-ADMIN\nmnt-by:         LAB-MNT\nsource:         LABRIR\n"
+    }
+  ],
+  "passwords": ["mypassword"]
+}
+EOF
+
+curl -v \
+  -H "Content-Type: application/json" \
+  --data-binary @update.json \
+  http://localhost:8080/v1/submit/
+
+
+
+  whois -h localhost -- '-i mnt-by LAB-MNT'
+
+jq -Rs '{objects:[{object_text:.}], passwords:["mypassword"]}' lab-irr-data.rpsl > update2.json

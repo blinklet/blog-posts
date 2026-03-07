@@ -1,0 +1,8 @@
+{
+  "objects": [
+    {
+      "object_text": "aut-num:        AS200\nas-name:        ISP-B\ndescr:          ISP-B - Peer that will attempt unauthorized announcement\nadmin-c:        LAB-ADMIN\ntech-c:         LAB-ADMIN\nmnt-by:         LAB-MNT\nsource:         LABRIR\n"
+    }
+  ],
+  "passwords": ["mypassword"]
+}
