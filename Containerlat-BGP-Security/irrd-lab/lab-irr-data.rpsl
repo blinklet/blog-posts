@@ -2,21 +2,6 @@
 % Source: LABRIR
 % This file is loaded into IRRd using irrd_load_database
 
-mntner:         LAB-MNT
-descr:          Lab maintainer for all objects; password is "mypassword"
-admin-c:        LAB-ADMIN
-upd-to:         lab@localhost
-auth:           MD5-PW $1$1lqf7qAl$YjnQZmn5oSbvMDpHITjsV0
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-person:         Lab Administrator
-address:        Lab Network
-phone:          +1-555-0100
-nic-hdl:        LAB-ADMIN
-mnt-by:         LAB-MNT
-source:         LABRIR
-
 aut-num:        AS100
 as-name:        ISP-A
 descr:          ISP-A - Legitimate prefix holder
@@ -27,13 +12,6 @@ source:         LABRIR
 aut-num:        AS200
 as-name:        ISP-B
 descr:          ISP-B - Peer that will attempt unauthorized announcement
-admin-c:        LAB-ADMIN
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-aut-num:        AS300
-as-name:        TRANSIT
-descr:          Transit provider - applies prefix filters
 admin-c:        LAB-ADMIN
 mnt-by:         LAB-MNT
 source:         LABRIR
@@ -62,8 +40,3 @@ origin:         AS200
 mnt-by:         LAB-MNT
 source:         LABRIR
 
-route:          100.64.0.0/24
-descr:          Transit provider prefix
-origin:         AS300
-mnt-by:         LAB-MNT
-source:         LABRIR

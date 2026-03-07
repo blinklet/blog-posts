@@ -1,0 +1,37 @@
+% Lab IRR data for the BGP prefix filtering lab
+% Source: LABRIR
+% This file is loaded into IRRd using irrd_load_database
+
+mntner:         LAB-MNT
+descr:          Lab maintainer for all objects; password is "mypassword"
+admin-c:        LAB-ADMIN
+upd-to:         test@irrtest.com
+auth:           MD5-PW $1$test$4PzmqjLUwdD2j1Otz/LSw.
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+person:         Lab Administrator
+address:        Lab Network
+phone:          +1-555-0100
+nic-hdl:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+aut-num:        AS300
+as-name:        TRANSIT
+descr:          Transit provider - applies prefix filters
+admin-c:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+as-set:         AS-TRANSIT
+descr:          AS set for TRANSIT and its customers
+members:        AS300
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+route:          100.64.0.0/24
+descr:          Transit provider prefix
+origin:         AS300
+mnt-by:         LAB-MNT
+source:         LABRIR

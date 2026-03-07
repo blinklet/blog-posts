@@ -3,7 +3,7 @@
 # as a Containerlab node. Not recommended for production — this is
 # a lab convenience that trades Docker best practices for simplicity.
 
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PGDATA=/var/lib/postgresql/data \
@@ -31,19 +31,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /var/log/irrd /var/run/irrd /etc/irrd /var/lib/irrd/gnupg \
     && chmod 700 /var/lib/irrd/gnupg
 
-# add PostgreSQL to PATH for convenience
-ENV PATH="/usr/lib/postgresql/15/bin:$PATH"
+# Make PostgreSQL binaries available on PATH regardless of major version
+RUN set -e; \
+    PGBIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb | head -n1)")"; \
+    ln -sf "$PGBIN/initdb" /usr/local/bin/initdb; \
+    ln -sf "$PGBIN/pg_ctl" /usr/local/bin/pg_ctl; \
+    ln -sf "$PGBIN/pg_isready" /usr/local/bin/pg_isready; \
+    ln -sf "$PGBIN/psql" /usr/local/bin/psql; \
+    ln -sf "$PGBIN/createdb" /usr/local/bin/createdb
 
 # Copy configuration and entrypoint
 COPY irrd.yaml /etc/irrd.yaml
 RUN mkdir -p /etc/irrd/data
-COPY lab-irr-data.rpsl /etc/irrd/data/lab-irr-data.rpsl
-RUN ln -sf /etc/irrd/data/lab-irr-data.rpsl /etc/irrd/lab-irr-data.rpsl
+COPY lab-irr-base.rpsl /etc/irrd/data/lab-irr-base.rpsl
+RUN ln -sf /etc/irrd/data/lab-irr-base.rpsl /etc/irrd/lab-irr-base.rpsl
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Bind-mount host directory with RPSL files to /etc/irrd/data
-VOLUME ["/etc/irrd/data"]
+# VOLUME ["/etc/irrd/data"]
 
 # Expose the WHOIS port
 EXPOSE 43

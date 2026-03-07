@@ -3,7 +3,14 @@ set -e
 
 echo "=== IRRd Lab Container Starting ==="
 
-PGBIN="$(dirname "$(command -v initdb)")"
+PGBIN="$(dirname "$(command -v initdb 2>/dev/null || true)")"
+if [ -z "$PGBIN" ] || [ "$PGBIN" = "." ] || [ ! -x "$PGBIN/initdb" ]; then
+    PGBIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb 2>/dev/null | head -n 1)")"
+fi
+if [ -z "$PGBIN" ] || [ "$PGBIN" = "." ] || [ ! -x "$PGBIN/initdb" ]; then
+    echo "ERROR: could not locate PostgreSQL binaries (initdb)."
+    exit 127
+fi
 mkdir -p /var/log/irrd
 chown postgres:postgres /var/log/irrd
 
@@ -80,16 +87,40 @@ irrd_database_upgrade --config /etc/irrd.yaml
 # ------------------------------------------------------------------
 # 4. Load RPSL data if a data file is mounted
 # ------------------------------------------------------------------
-if [ -f /etc/irrd/lab-irr-data.rpsl ]; then
-    echo "Loading RPSL objects from /etc/irrd/lab-irr-data.rpsl..."
-    irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+if [ -f /etc/irrd/lab-irr-base.rpsl ]; then
+    echo "Loading RPSL objects from /etc/irrd/lab-irr-base.rpsl..."
+    irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
     echo "RPSL data loaded."
 else
-    echo "No RPSL data file found at /etc/irrd/lab-irr-data.rpsl — skipping load."
+    echo "No RPSL data file found at /etc/irrd/lab-irr-base.rpsl — skipping load."
 fi
 
 # ------------------------------------------------------------------
-# 5. Start IRRd in the foreground
+# 5. Bootstrap fixed Web UI admin user (no SMTP required)
+# ------------------------------------------------------------------
+echo "Bootstrapping IRRd Web UI admin user: test@irrtest.com"
+WEBUI_PASSWORD_HASH="$(python - <<'PY'
+from passlib.hash import bcrypt
+print(bcrypt.hash("mypassword"))
+PY
+)"
+
+su - postgres -c "$PGBIN/psql -d irrd -v ON_ERROR_STOP=1 <<'SQL'
+INSERT INTO auth_user (email, name, password, active, override)
+VALUES ('test@irrtest.com', 'Lab Administrator', '$WEBUI_PASSWORD_HASH', true, true)
+ON CONFLICT (email)
+DO UPDATE SET
+    name = EXCLUDED.name,
+    password = EXCLUDED.password,
+    active = EXCLUDED.active,
+    override = EXCLUDED.override,
+    updated = now();
+SQL"
+
+echo "Web UI user created/updated: test@irrtest.com (override=true)"
+
+# ------------------------------------------------------------------
+# 6. Start IRRd in the foreground
 # ------------------------------------------------------------------
 echo "Starting IRRd..."
 echo "=== IRRd Lab Container Ready ==="

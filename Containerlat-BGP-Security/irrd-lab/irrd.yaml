@@ -18,14 +18,14 @@ irrd:
 
     auth:
         gnupg_keyring: /var/lib/irrd/gnupg/
-        override_password: '$1$lab$3wVEBstb/LcL4FK.G22mP.'
+        override_password: '$1$test$4PzmqjLUwdD2j1Otz/LSw.' # password: mypassword
         set_creation:
             COMMON:
                 prefix_required: false
                 autnum_authentication: disabled
 
     email:
-        from: 'irrd-lab@localhost'
+        from: 'test@irrtest.com'
         footer: ''
         smtp: 'localhost'
 
