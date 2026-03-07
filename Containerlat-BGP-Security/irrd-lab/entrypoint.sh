@@ -3,6 +3,10 @@ set -e
 
 echo "=== IRRd Lab Container Starting ==="
 
+PGBIN="$(dirname "$(command -v initdb)")"
+mkdir -p /var/log/irrd
+chown postgres:postgres /var/log/irrd
+
 # ------------------------------------------------------------------
 # 1. Start PostgreSQL
 # ------------------------------------------------------------------
@@ -12,7 +16,7 @@ echo "Starting PostgreSQL..."
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
     mkdir -p "$PGDATA"
     chown postgres:postgres "$PGDATA"
-    su - postgres -c "initdb -D $PGDATA"
+    su - postgres -c "$PGBIN/initdb -D $PGDATA"
 fi
 
 # Tune PostgreSQL for minimal lab use
@@ -31,12 +35,12 @@ host    all   all   127.0.0.1/32  trust
 host    all   all   ::1/128       trust
 EOF
 
-su - postgres -c "pg_ctl -D $PGDATA -l /var/log/irrd/postgresql.log start"
+su - postgres -c "$PGBIN/pg_ctl -D $PGDATA -l /var/log/irrd/postgresql.log start"
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to accept connections..."
 for i in $(seq 1 30); do
-    if su - postgres -c "pg_isready -q" 2>/dev/null; then
+    if su - postgres -c "$PGBIN/pg_isready -q" 2>/dev/null; then
         break
     fi
     sleep 1
@@ -44,9 +48,9 @@ done
 
 # Create the IRRd database and pgcrypto extension
 echo "Creating IRRd database..."
-su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='irrd'\" | grep -q 1" || \
-    su - postgres -c "createdb irrd"
-su - postgres -c "psql -d irrd -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
+su - postgres -c "$PGBIN/psql -tc \"SELECT 1 FROM pg_database WHERE datname='irrd'\" | grep -q 1" || \
+    su - postgres -c "$PGBIN/createdb irrd"
+su - postgres -c "$PGBIN/psql -d irrd -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
 
 # ------------------------------------------------------------------
 # 2. Start Redis (no persistence, low memory)

@@ -4,8 +4,6 @@ Every day, Internet service providers make trust decisions about which routes to
 
 The standard tool for building these filters is [bgpq4](https://github.com/bgp/bgpq4), a command-line utility that queries IRR servers like [RADB](https://www.radb.net/) and generates router filter configurations automatically. Together, IRR data and bgpq4 form the most widely deployed BGP security mechanism on the Internet today. Yet most network engineers have never set up an IRR server themselves, and many have never seen how bgpq4 queries translate into working router filters.
 
-<!--more-->
-
 In this post, I will show you how to run your own IRR server using [IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) — the same software that powers production registries like RADB — entirely inside a [Containerlab](https://containerlab.dev/) lab environment. I will populate the IRR database with routing policy objects for a small three-AS network, use bgpq4 to generate [FRR](https://frrouting.org/) prefix-list filters from that data, and then demonstrate how those filters prevent a BGP peer from announcing prefixes it does not own.
 
 Running your own IRRd instance means you can experiment freely: register any prefix, create any AS number, and test filter behavior without touching production infrastructure. Everything runs locally in containers on a single Linux host.
@@ -103,19 +101,19 @@ Transit (AS300) announces the IRRd link subnet (10.0.0.4/31) into BGP so that IS
 
 ### Design Notes
 
-The IRRd server runs PostgreSQL, Redis, and IRRd together in a single "all-in-one" container. Bundling multiple services into one container is not the recommended Docker pattern for production, but it is pragmatic for a lab: it keeps the Containerlab topology file simple (one node instead of three) and lets a single `containerlab deploy` command bring up the entire environment. In production, IRRd, PostgreSQL, and Redis would each run as separate services.
+The IRRd server runs PostgreSQL, Redis, and IRRd together in a single "all-in-one" container. Bundling multiple services into one container is not the recommended Docker pattern for production, but it is pragmatic for a lab. It keeps the Containerlab topology file simple (one node instead of three) and lets a single `containerlab deploy` command bring up the entire environment. In production, IRRd, PostgreSQL, and Redis would each run as separate services.
 
 The bgpq4 utility container is a lightweight Debian container with the `bgpq4` package installed. It is connected to Transit's network so it can reach the IRRd server over a Layer 3 path, similar to how a network management station on an operator's network would query public IRR servers. Running bgpq4 inside the topology means everything the lab needs is self-contained — no additional software needs to be installed on the host machine.
 
 ## Building the IRRd Container Image
 
-IRRd does not publish an official Docker image. The [deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/) describes a native installation with PostgreSQL and Redis as separate services. Since we want everything in a single Containerlab topology — no Docker Compose, no external services — we will build a custom all-in-one container that bundles PostgreSQL, Redis, and IRRd together.
+IRRd does not publish an official Docker image. The [deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/) describes a native installation with PostgreSQL and Redis as separate services. Since we want everything in a single Containerlab topology, with no Docker Compose and no external services, we will build a custom all-in-one container that bundles PostgreSQL, Redis, and IRRd together.
 
-This section creates three files: a Dockerfile, an entrypoint script, and an IRRd configuration file. All three go in the *irrd-lab/* directory alongside the Containerlab topology file we will create later.
+We will create three files: a Dockerfile, an entrypoint script, and an IRRd configuration file. All three go in the *irrd-lab/* directory alongside the Containerlab topology file we will create later.
 
 ### The Dockerfile
 
-The Dockerfile starts from `python:3.11-slim-bookworm` (a Debian Bookworm base with Python pre-installed), installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI using `pip`. Build dependencies like `gcc` and `rustc` (needed to compile some of IRRd's Python dependencies) are removed after installation to keep the image smaller.
+The Dockerfile starts from `python:3.11-slim-bookworm` (a Debian Bookworm base with Python pre-installed), installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI using `pip`. Build dependencies like `gcc` and `rustc` (needed to compile some of IRRd's Python dependencies) are removed after installation to keep the image smaller. It also adds a Docker healthcheck and includes the lab RPSL data file in the image.
 
 Create the file *irrd-lab/Dockerfile.irrd*:
 
@@ -153,13 +151,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /var/log/irrd /var/run/irrd /etc/irrd /var/lib/irrd/gnupg \
     && chmod 700 /var/lib/irrd/gnupg
 
+# add PostgreSQL to PATH for convenience
+ENV PATH="/usr/lib/postgresql/15/bin:$PATH"
+
 # Copy configuration and entrypoint
 COPY irrd.yaml /etc/irrd.yaml
+COPY lab-irr-data.rpsl /etc/irrd/lab-irr-data.rpsl
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose the WHOIS port
 EXPOSE 43
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD sh -ec "pg_isready -q && redis-cli ping | grep -q PONG && nc -z 127.0.0.1 43"
 
 ENTRYPOINT ["/entrypoint.sh"]
 ```
@@ -178,6 +183,10 @@ set -e
 
 echo "=== IRRd Lab Container Starting ==="
 
+PGBIN="$(dirname "$(command -v initdb)")"
+mkdir -p /var/log/irrd
+chown postgres:postgres /var/log/irrd
+
 # ------------------------------------------------------------------
 # 1. Start PostgreSQL
 # ------------------------------------------------------------------
@@ -187,7 +196,7 @@ echo "Starting PostgreSQL..."
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
     mkdir -p "$PGDATA"
     chown postgres:postgres "$PGDATA"
-    su - postgres -c "initdb -D $PGDATA"
+    su - postgres -c "$PGBIN/initdb -D $PGDATA"
 fi
 
 # Tune PostgreSQL for minimal lab use
@@ -206,12 +215,12 @@ host    all   all   127.0.0.1/32  trust
 host    all   all   ::1/128       trust
 EOF
 
-su - postgres -c "pg_ctl -D $PGDATA -l /var/log/irrd/postgresql.log start"
+su - postgres -c "$PGBIN/pg_ctl -D $PGDATA -l /var/log/irrd/postgresql.log start"
 
 # Wait for PostgreSQL to accept connections
 echo "Waiting for PostgreSQL to accept connections..."
 for i in $(seq 1 30); do
-    if su - postgres -c "pg_isready -q" 2>/dev/null; then
+  if su - postgres -c "$PGBIN/pg_isready -q" 2>/dev/null; then
         break
     fi
     sleep 1
@@ -219,9 +228,9 @@ done
 
 # Create the IRRd database and pgcrypto extension
 echo "Creating IRRd database..."
-su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='irrd'\" \
-    | grep -q 1" || su - postgres -c "createdb irrd"
-su - postgres -c "psql -d irrd -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
+su - postgres -c "$PGBIN/psql -tc \"SELECT 1 FROM pg_database WHERE datname='irrd'\" | grep -q 1" || \
+    su - postgres -c "$PGBIN/createdb irrd"
+su - postgres -c "$PGBIN/psql -d irrd -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
 
 # ------------------------------------------------------------------
 # 2. Start Redis (no persistence, low memory)
@@ -253,11 +262,10 @@ irrd_database_upgrade --config /etc/irrd.yaml
 # ------------------------------------------------------------------
 if [ -f /etc/irrd/lab-irr-data.rpsl ]; then
     echo "Loading RPSL objects from /etc/irrd/lab-irr-data.rpsl..."
-    irrd_load_database --config /etc/irrd.yaml --source LABRIR \
-        /etc/irrd/lab-irr-data.rpsl
+    irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
     echo "RPSL data loaded."
 else
-    echo "No RPSL data file found — skipping load."
+    echo "No RPSL data file found at /etc/irrd/lab-irr-data.rpsl — skipping load."
 fi
 
 # ------------------------------------------------------------------
@@ -273,7 +281,7 @@ The script follows a strict startup sequence:
 1. **PostgreSQL** starts first. The script initializes a fresh database cluster on the first run, tunes a few key parameters (`random_page_cost`, `work_mem`), and creates the `irrd` database with the required `pgcrypto` extension.
 2. **Redis** starts next with persistence disabled (the `--save ""` and `--appendonly no` flags) because lab data does not need to survive a container restart.
 3. **`irrd_database_upgrade`** runs the schema migration that creates IRRd's internal tables.
-4. If a file is bind-mounted at */etc/irrd/lab-irr-data.rpsl*, the script loads those RPSL objects automatically using `irrd_load_database`. This is how we will populate the IRR with our lab's routing policy data.
+4. If a file exists at */etc/irrd/lab-irr-data.rpsl* (either copied into the image or bind-mounted), the script loads those RPSL objects automatically using `irrd_load_database`. This is how we will populate the IRR with our lab's routing policy data.
 5. Finally, **IRRd** starts in the foreground with `--foreground`, so Docker sees it as the container's main process.
 
 ### The IRRd Configuration File
@@ -284,13 +292,15 @@ Create the file *irrd-lab/irrd.yaml*:
 
 ```yaml
 irrd:
-    database_url: 'postgresql:///irrd'
+    database_url: 'postgresql://postgres@localhost/irrd'
     redis_url: 'redis://localhost'
     piddir: /var/run/irrd/
+    user: postgres
+    group: postgres
 
     server:
         http:
-            interface: '127.0.0.1'
+            interface: '0.0.0.0'
             port: 8080
             url: 'http://localhost:8080/'
             workers: 1
@@ -333,9 +343,10 @@ irrd:
 
 The key settings:
 
-- **`database_url`** connects to the local PostgreSQL instance over a Unix socket (both services are in the same container, so `postgresql:///irrd` is sufficient).
+- **`database_url`** connects to the local PostgreSQL instance over localhost TCP using the `postgres` role (`postgresql://postgres@localhost/irrd`).
 - **`redis_url`** connects to the local Redis instance over TCP on localhost.
-- **`server.whois.interface: '0.0.0.0'`** makes the WHOIS port listen on all interfaces, so bgpq4 and other tools can query IRRd from the network.
+- **`user`** and **`group`** run IRRd as the `postgres` user/group in this lab container.
+- **`server.http.interface: '0.0.0.0'`** and **`server.whois.interface: '0.0.0.0'`** make both interfaces reachable from outside the container network namespace.
 - **`server.whois.port: 43`** is the standard WHOIS port — the same port that bgpq4 queries by default.
 - **`server.http.workers: 1`** and **`server.whois.max_connections: 5`** keep memory usage low. Each WHOIS connection uses about 200–250 MB, so limiting to 5 connections keeps the lab under 2 GB.
 - **`rpki.roa_source: null`** disables RPKI integration entirely — that is for a future post.
@@ -353,6 +364,23 @@ $ docker build -t irrd-lab -f Dockerfile.irrd .
 
 The build takes several minutes because IRRd has many Python dependencies (including some that require compilation). Once built, the image is cached locally and does not need to be rebuilt unless you change the Dockerfile.
 
+### Checking Container Health
+
+The image defines a Docker `HEALTHCHECK` that verifies three things:
+
+- PostgreSQL is accepting connections (`pg_isready -q`)
+- Redis is responding (`redis-cli ping` returns `PONG`)
+- IRRd's WHOIS listener is up on TCP port 43 (`nc -z 127.0.0.1 43`)
+
+Check health status with:
+
+```bash
+$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+$ docker inspect --format '{{json .State.Health}}' <container_name>
+```
+
+A brief initial `starting` state, or even one failed probe while services initialize, can be normal.
+
 ### Troubleshooting
 
 If the IRRd container fails to start, the most common issues are:
@@ -361,6 +389,7 @@ If the IRRd container fails to start, the most common issues are:
 - **Redis connection refused** — Verify Redis started successfully: `docker exec clab-...-irrd redis-cli ping` should return `PONG`
 - **IRRd configuration errors** — IRRd validates its configuration on startup and will refuse to start if it finds problems. Check the container logs: `docker logs clab-...-irrd`
 - **Slow startup** — The all-in-one container needs 15–30 seconds to initialize PostgreSQL, run migrations, load RPSL data, and start IRRd. If you query the WHOIS port before IRRd is ready, the connection will be refused. Wait for the "IRRd Lab Container Ready" message in the logs.
+- **`docker inspect` template error** — If you run `docker inspect --format '{{json .State.Health}}' irrd-lab` and `irrd-lab` is an image name (not a container name), Docker returns a template error like `map has no entry for key "State"`. Use the running container name instead.
 
 ## Populating the IRR Database
 

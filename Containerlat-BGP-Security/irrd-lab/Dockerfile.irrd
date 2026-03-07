@@ -31,12 +31,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /var/log/irrd /var/run/irrd /etc/irrd /var/lib/irrd/gnupg \
     && chmod 700 /var/lib/irrd/gnupg
 
+# add PostgreSQL to PATH for convenience
+ENV PATH="/usr/lib/postgresql/15/bin:$PATH"
+
 # Copy configuration and entrypoint
 COPY irrd.yaml /etc/irrd.yaml
+RUN mkdir -p /etc/irrd/data
+COPY lab-irr-data.rpsl /etc/irrd/data/lab-irr-data.rpsl
+RUN ln -sf /etc/irrd/data/lab-irr-data.rpsl /etc/irrd/lab-irr-data.rpsl
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Bind-mount host directory with RPSL files to /etc/irrd/data
+VOLUME ["/etc/irrd/data"]
+
 # Expose the WHOIS port
 EXPOSE 43
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+    CMD sh -ec "pg_isready -q && redis-cli ping | grep -q PONG && nc -z 127.0.0.1 43"
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -1,11 +1,13 @@
 irrd:
-    database_url: 'postgresql:///irrd'
+    database_url: 'postgresql://postgres@localhost/irrd'
     redis_url: 'redis://localhost'
     piddir: /var/run/irrd/
+    user: postgres
+    group: postgres
 
     server:
         http:
-            interface: '127.0.0.1'
+            interface: '0.0.0.0'
             port: 8080
             url: 'http://localhost:8080/'
             workers: 1
