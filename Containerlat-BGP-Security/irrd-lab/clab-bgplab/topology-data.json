@@ -1,0 +1,264 @@
+{
+  "name": "bgplab",
+  "type": "clab",
+  "clab": {
+    "config": {
+      "prefix": "clab",
+      "mgmt": {
+        "network": "mgmt-bgplab",
+        "bridge": "br-ebd542ec89db",
+        "ipv4-subnet": "172.20.30.0/24",
+        "ipv4-gw": "172.20.30.1",
+        "external-access": true
+      }
+    }
+  },
+  "ssh-pub-keys": ["ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnGfhvHq9m7ipyJd6afxshWW3OZQVBJC/SEVre5pt/C6MuAUv390GJyDP0yfa2yUOVIwXoSQeufQ5/bYAnUoPAKYaMpZqas91sNnXp+AfsMJ6gjrbWpSQpYXhI/EH0J4n0F4sb/lr/fhMXhe69WqpVNL0Kw40wTHzhw93zELNdzECIg4Zmzk2S2xGV/6jZ4VOzskgx0VP449cAx1QV0gB3OUcOMxX/JeMED0gsBqKg3bBtVb8XoZi5yX1S/1AelluezxwYse+pxAdUnu0ZnZgzFj7wmt1SmEdHJVTnNBmO/CXDohD6Rw2NJyBGs7VMDtU7JD2VduVf20x8wroybiUv"],
+  "nodes": {
+    "as100": {
+      "index": "0",
+      "shortname": "as100",
+      "longname": "clab-bgplab-as100",
+      "fqdn": "as100.bgplab.io",
+      "group": "",
+      "labdir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as100",
+      "kind": "linux",
+      "image": "quay.io/frrouting/frr:10.5.1",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.30.5",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "",
+      "mgmt-ipv6-prefix-length": 0,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as100",
+        "clab-node-longname": "clab-bgplab-as100",
+        "clab-node-name": "as100",
+        "clab-node-type": "",
+        "clab-owner": "blinklet",
+        "clab-topo-file": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/topology.yml",
+        "containerlab": "bgplab"
+      },
+      "port-bindings": [
+      ]
+    },
+    "as200": {
+      "index": "1",
+      "shortname": "as200",
+      "longname": "clab-bgplab-as200",
+      "fqdn": "as200.bgplab.io",
+      "group": "",
+      "labdir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as200",
+      "kind": "linux",
+      "image": "quay.io/frrouting/frr:10.5.1",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.30.3",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "",
+      "mgmt-ipv6-prefix-length": 0,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as200",
+        "clab-node-longname": "clab-bgplab-as200",
+        "clab-node-name": "as200",
+        "clab-node-type": "",
+        "clab-owner": "blinklet",
+        "clab-topo-file": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/topology.yml",
+        "containerlab": "bgplab"
+      },
+      "port-bindings": [
+      ]
+    },
+    "as300": {
+      "index": "2",
+      "shortname": "as300",
+      "longname": "clab-bgplab-as300",
+      "fqdn": "as300.bgplab.io",
+      "group": "",
+      "labdir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as300",
+      "kind": "linux",
+      "image": "quay.io/frrouting/frr:10.5.1",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.30.6",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "",
+      "mgmt-ipv6-prefix-length": 0,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as300",
+        "clab-node-longname": "clab-bgplab-as300",
+        "clab-node-name": "as300",
+        "clab-node-type": "",
+        "clab-owner": "blinklet",
+        "clab-topo-file": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/topology.yml",
+        "containerlab": "bgplab"
+      },
+      "port-bindings": [
+      ]
+    },
+    "bgpq4": {
+      "index": "3",
+      "shortname": "bgpq4",
+      "longname": "clab-bgplab-bgpq4",
+      "fqdn": "bgpq4.bgplab.io",
+      "group": "",
+      "labdir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/bgpq4",
+      "kind": "linux",
+      "image": "bgpq4-utils",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.30.4",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "",
+      "mgmt-ipv6-prefix-length": 0,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/bgpq4",
+        "clab-node-longname": "clab-bgplab-bgpq4",
+        "clab-node-name": "bgpq4",
+        "clab-node-type": "",
+        "clab-owner": "blinklet",
+        "clab-topo-file": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/topology.yml",
+        "containerlab": "bgplab"
+      },
+      "port-bindings": [
+      ]
+    },
+    "irrd": {
+      "index": "4",
+      "shortname": "irrd",
+      "longname": "clab-bgplab-irrd",
+      "fqdn": "irrd.bgplab.io",
+      "group": "",
+      "labdir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/irrd",
+      "kind": "linux",
+      "image": "irrd-lab",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.30.2",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "",
+      "mgmt-ipv6-prefix-length": 0,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/irrd",
+        "clab-node-longname": "clab-bgplab-irrd",
+        "clab-node-name": "irrd",
+        "clab-node-type": "",
+        "clab-owner": "blinklet",
+        "clab-topo-file": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/topology.yml",
+        "containerlab": "bgplab"
+      },
+      "port-bindings": [
+        {
+          "host-ip": "0.0.0.0",
+          "host-port": 8043,
+          "port": 43,
+          "protocol": "tcp"
+        },
+        {
+          "host-ip": "::",
+          "host-port": 8043,
+          "port": 43,
+          "protocol": "tcp"
+        },
+        {
+          "host-ip": "0.0.0.0",
+          "host-port": 8080,
+          "port": 8080,
+          "protocol": "tcp"
+        },
+        {
+          "host-ip": "::",
+          "host-port": 8080,
+          "port": 8080,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "endpoints": {
+        "a": {
+          "node": "as100",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:93:31:28",
+          "peer": "z"
+        },
+        "z": {
+          "node": "as300",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:b1:8a:d5",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "as200",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:4b:2f:b3",
+          "peer": "z"
+        },
+        "z": {
+          "node": "as300",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:f7:29:99",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "irrd",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:f2:0f:fd",
+          "peer": "z"
+        },
+        "z": {
+          "node": "as300",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:67:78:fb",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "bgpq4",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:8e:dc:93",
+          "peer": "z"
+        },
+        "z": {
+          "node": "as300",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:15:d0:7e",
+          "peer": "a"
+        }
+      }
+    }
+  ]
+}

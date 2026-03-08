@@ -66,10 +66,10 @@ The lab uses three autonomous systems connected in a hub-and-spoke topology, wit
       │  AS100  │    │  AS300   │    │  AS200  │
       └─────────┘    └──┬────┬──┘    └─────────┘
                         │    │
-              ┌─────────┴┐  ┌┴────────┐
-              │   IRRd   │  │  bgpq4  │
-              │(WHOIS:43)│  │(utility)│
-              └──────────┘  └─────────┘
+               ┌────────┴┐  ┌┴────────┐
+               │  IRRd   │  │  bgpq4  │
+               │(utility)│  │(utility)│
+               └─────────┘  └─────────┘
 ```
 
 ISP-A and ISP-B reach the IRRd server by routing through Transit — the same way real-world operators reach public IRR servers over the Internet.
@@ -156,7 +156,7 @@ ENV PATH="/usr/lib/postgresql/15/bin:$PATH"
 
 # Copy configuration and entrypoint
 COPY irrd.yaml /etc/irrd.yaml
-COPY lab-irr-data.rpsl /etc/irrd/lab-irr-data.rpsl
+COPY lab-irr-base.rpsl /etc/irrd/lab-irr-base.rpsl
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -260,12 +260,12 @@ irrd_database_upgrade --config /etc/irrd.yaml
 # ------------------------------------------------------------------
 # 4. Load RPSL data if a data file is mounted
 # ------------------------------------------------------------------
-if [ -f /etc/irrd/lab-irr-data.rpsl ]; then
-    echo "Loading RPSL objects from /etc/irrd/lab-irr-data.rpsl..."
-    irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+if [ -f /etc/irrd/lab-irr-base.rpsl ]; then
+    echo "Loading RPSL objects from /etc/irrd/lab-irr-base.rpsl..."
+    irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
     echo "RPSL data loaded."
 else
-    echo "No RPSL data file found at /etc/irrd/lab-irr-data.rpsl — skipping load."
+    echo "No RPSL data file found at /etc/irrd/lab-irr-base.rpsl — skipping load."
 fi
 
 # ------------------------------------------------------------------
@@ -281,7 +281,7 @@ The script follows a strict startup sequence:
 1. **PostgreSQL** starts first. The script initializes a fresh database cluster on the first run, tunes a few key parameters (`random_page_cost`, `work_mem`), and creates the `irrd` database with the required `pgcrypto` extension.
 2. **Redis** starts next with persistence disabled (the `--save ""` and `--appendonly no` flags) because lab data does not need to survive a container restart.
 3. **`irrd_database_upgrade`** runs the schema migration that creates IRRd's internal tables.
-4. If a file exists at */etc/irrd/lab-irr-data.rpsl* (either copied into the image or bind-mounted), the script loads those RPSL objects automatically using `irrd_load_database`. This is how we will populate the IRR with our lab's routing policy data.
+4. If a file exists at */etc/irrd/lab-irr-base.rpsl* (either copied into the image or bind-mounted), the script loads those RPSL objects automatically using `irrd_load_database`. This is how we will populate the IRR with our lab's routing policy data.
 5. Finally, **IRRd** starts in the foreground with `--foreground`, so Docker sees it as the container's main process.
 
 ### The IRRd Configuration File
@@ -407,14 +407,14 @@ RPSL (Routing Policy Specification Language) uses a simple text format: each obj
 
 The critical detail is what we *do not* register: there is no route object for 198.51.100.0/24 with origin AS200. This is the gap that the prefix filter will enforce — when AS200 later tries to announce that prefix, bgpq4's filter will block it because the IRR has no matching registration.
 
-Create the file *irrd-lab/lab-irr-data.rpsl*:
+Create the file *irrd-lab/lab-irr-base.rpsl*:
 
 ```
 mntner:         LAB-MNT
-descr:          Lab maintainer for all objects
+descr:          Lab maintainer for all objects; password is "mypassword"
 admin-c:        LAB-ADMIN
-upd-to:         lab@localhost
-auth:           MD5-PW $1$lab$3wVEBstb/LcL4FK.G22mP.
+upd-to:         test@irrtest.com
+auth:           MD5-PW $1$test$4PzmqjLUwdD2j1Otz/LSw.
 mnt-by:         LAB-MNT
 source:         LABRIR
 
@@ -425,48 +425,10 @@ nic-hdl:        LAB-ADMIN
 mnt-by:         LAB-MNT
 source:         LABRIR
 
-aut-num:        AS100
-as-name:        ISP-A
-descr:          ISP-A - Legitimate prefix holder
-admin-c:        LAB-ADMIN
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-aut-num:        AS200
-as-name:        ISP-B
-descr:          ISP-B - Peer that will attempt unauthorized announcement
-admin-c:        LAB-ADMIN
-mnt-by:         LAB-MNT
-source:         LABRIR
-
 aut-num:        AS300
 as-name:        TRANSIT
 descr:          Transit provider - applies prefix filters
 admin-c:        LAB-ADMIN
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-as-set:         AS-ISP-A
-descr:          AS set for ISP-A and its customers
-members:        AS100
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-as-set:         AS-ISP-B
-descr:          AS set for ISP-B and its customers
-members:        AS200
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-route:          198.51.100.0/24
-descr:          ISP-A prefix
-origin:         AS100
-mnt-by:         LAB-MNT
-source:         LABRIR
-
-route:          203.0.113.0/24
-descr:          ISP-B prefix
-origin:         AS200
 mnt-by:         LAB-MNT
 source:         LABRIR
 
@@ -475,21 +437,22 @@ descr:          Transit provider prefix
 origin:         AS300
 mnt-by:         LAB-MNT
 source:         LABRIR
+
 ```
 
 A few things to note about these objects:
 
 - All objects reference **`LAB-MNT`** as their maintainer and use the same MD5 password hash. In a real IRR, each organization would have its own maintainer with its own credentials. For a lab, a single shared maintainer keeps things simple.
-- The **`auth: MD5-PW`** line contains a salted MD5 hash of the password "lab". This matches the override password in our *irrd.yaml* configuration.
+- The **`auth: MD5-PW`** line contains a salted MD5 hash of the password "mypassword". This matches the override password in our *irrd.yaml* configuration.
 - Every object includes **`source: LABRIR`**, which must exactly match the source name defined in the IRRd configuration (case-sensitive).
 - The **as-set** objects (AS-ISP-A and AS-ISP-B) each contain a single member AS. In practice, an ISP's as-set might contain dozens of customer ASes. bgpq4 recursively expands as-set membership to find all authorized prefixes — this is how operators build filters for transit customers who have their own downstream networks.
 
 ### Loading the Data
 
-The entrypoint script we created in Part 4 automatically loads RPSL data from */etc/irrd/lab-irr-data.rpsl* if the file exists. When we build the Containerlab topology in a later section, we will bind-mount this file into the container. The entrypoint runs:
+The entrypoint script we created in Part 4 automatically loads RPSL data from */etc/irrd/lab-irr-base.rpsl* if the file exists. When we build the Containerlab topology in a later section, we will bind-mount this file into the container. The entrypoint runs:
 
 ```bash
-irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
 ```
 
 The `irrd_load_database` command performs a bulk import that replaces all existing objects in the specified source with the contents of the file. This is the same mechanism production IRR operators use to load full database snapshots. For our lab, it loads all 11 objects in a single operation.
@@ -498,17 +461,17 @@ If you need to reload the data after the lab is running (for example, after edit
 
 ```bash
 $ docker exec clab-bgplab-irrd irrd_load_database \
-    --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-data.rpsl
+    --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
 ```
 
 ### Verifying the Data
 
-Once the IRRd container is running and the data is loaded, you can verify it using WHOIS queries. The WHOIS protocol is text-based: you send a query string over TCP to port 43 and receive the matching objects in plain text.
+Once the IRRd container is running and the data is loaded, you can verify it from the separate bgpq4 utility container. This confirms the IRRd node is reachable at its topology IP, not just from inside the IRRd container itself. The WHOIS protocol is text-based: you send a query string over TCP to port 43 and receive the matching objects in plain text.
 
 Query for all route objects registered to AS100:
 
 ```bash
-$ docker exec clab-bgplab-irrd bash -c 'echo "-i origin AS100" | nc localhost 43'
+$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "-i origin AS100" | nc 10.0.0.4 43'
 ```
 
 Expected output:
@@ -524,13 +487,13 @@ source:         LABRIR
 Query for a specific prefix:
 
 ```bash
-$ docker exec clab-bgplab-irrd bash -c 'echo "198.51.100.0/24" | nc localhost 43'
+$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "198.51.100.0/24" | nc 10.0.0.4 43'
 ```
 
 Expand the AS-ISP-A set using IRRd's extended query syntax (the `!i` command):
 
 ```bash
-$ docker exec clab-bgplab-irrd bash -c 'echo "!iAS-ISP-A" | nc localhost 43'
+$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "!iAS-ISP-A" | nc 10.0.0.4 43'
 ```
 
 Expected output:
@@ -549,7 +512,7 @@ With a working IRRd server full of RPSL objects, we can now do what real network
 
 Rather than installing bgpq4 on the host, we will run it inside a lightweight utility container that is part of the Containerlab topology. This keeps the entire lab self-contained — everything runs with `containerlab deploy`.
 
-The Dockerfile is minimal. It installs bgpq4 from Debian's package repository along with basic networking tools, and uses `sleep infinity` to keep the container running. Create the file *irrd-lab/Dockerfile.bgpq4*:
+The Dockerfile is minimal. It installs bgpq4 from Debian's package repository plus query tools (`nc` and `whois`), and uses `sleep infinity` to keep the container running. Create the file *irrd-lab/Dockerfile.bgpq4*:
 
 ```dockerfile
 # Utility container with bgpq4 for querying IRR servers
@@ -561,6 +524,8 @@ RUN apt-get update && \
         bgpq4 \
         iproute2 \
         iputils-ping \
+        netcat-openbsd \
+        whois \
     && rm -rf /var/lib/apt/lists/*
 
 CMD ["sleep", "infinity"]
@@ -767,8 +732,6 @@ topology:
     irrd:
       kind: linux
       image: irrd-lab
-      binds:
-        - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
       exec:
         - ip addr add 10.0.0.4/31 dev eth1
         - ip route add 10.0.0.0/29 via 10.0.0.5
@@ -799,7 +762,7 @@ A few things to note in this topology:
 
 - The three FRR nodes use the official `quay.io/frrouting/frr:10.2.1` image. The `binds:` stanzas inject the *daemons* and *frr.conf* files directly into each container at startup.
 - The `exec:` stanzas assign IP addresses to the loopback and point-to-point interfaces. FRR's *zebra* daemon picks up these addresses from the Linux kernel and makes them available for BGP to announce.
-- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-data.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all three AS prefixes via AS300. The route to `10.0.0.0/29` covers all four point-to-point link subnets.
+- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-base.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all three AS prefixes via AS300. The route to `10.0.0.0/29` covers all four point-to-point link subnets.
 - The **bgpq4 node** uses the `bgpq4-utils` image we built earlier. It has a single point-to-point link to AS300 (eth4) and a default route pointing to AS300 at 10.0.0.7. This gives it Layer 3 reachability to the IRRd server through AS300's forwarding.
 - AS300's FRR configuration includes `network 10.0.0.4/31` so that AS100 and AS200 learn routes to the IRRd subnet via BGP. This mirrors how operators in the real world reach public IRR servers like RADB — over the Internet, through their transit providers.
 - AS300 has **four** point-to-point interfaces: eth1–eth3 for the three BGP peers, and eth4 for the bgpq4 utility container.
@@ -907,6 +870,7 @@ irrd-lab/
 ├── Dockerfile.bgpq4
 ├── entrypoint.sh
 ├── irrd.yaml
+├── lab-irr-base.rpsl
 ├── lab-irr-data.rpsl
 ├── topology.yml
 ├── generate-filters.sh
@@ -956,13 +920,13 @@ $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
 
 Expected output should include three prefixes: 198.51.100.0/24 (from AS100), 203.0.113.0/24 (from AS200), and 100.64.0.0/24 (locally originated by AS300).
 
-Verify that AS100 can reach the IRRd server through AS300:
+Verify that the dedicated query node can reach the IRRd server through AS300:
 
 ```bash
-$ docker exec clab-bgplab-as100 bash -c 'echo "AS100" | nc 10.0.0.4 43'
+$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "AS100" | nc 10.0.0.4 43'
 ```
 
-This confirms end-to-end connectivity: AS100 routes to the IRRd subnet (10.0.0.4/31) via its BGP-learned route through AS300, and IRRd responds with the aut-num object for AS100.
+This confirms end-to-end connectivity: the bgpq4 utility container routes to the IRRd subnet (10.0.0.4/31) through AS300, and IRRd responds over WHOIS.
 
 This is the **baseline** state — all BGP announcements are accepted without filtering. AS300 trusts whatever its peers announce. In the next section, we will apply the IRR-based prefix filters generated by bgpq4 to restrict what AS300 accepts from each peer.
 

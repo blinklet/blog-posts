@@ -11,7 +11,7 @@ topology:
     # ── ISP-A (AS100) — Legitimate prefix holder ─────────
     as100:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.5.1
       binds:
         - configs/as100/daemons:/etc/frr/daemons
         - configs/as100/frr.conf:/etc/frr/frr.conf
@@ -22,7 +22,7 @@ topology:
     # ── ISP-B (AS200) — Peer / will attempt hijack ───────
     as200:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.5.1
       binds:
         - configs/as200/daemons:/etc/frr/daemons
         - configs/as200/frr.conf:/etc/frr/frr.conf
@@ -33,7 +33,7 @@ topology:
     # ── Transit (AS300) — Applies IRR-based filters ───────
     as300:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.5.1
       binds:
         - configs/as300/daemons:/etc/frr/daemons
         - configs/as300/frr.conf:/etc/frr/frr.conf
@@ -48,6 +48,9 @@ topology:
     irrd:
       kind: linux
       image: irrd-lab
+      ports:
+        - 8080:8080
+        - 8043:43
       binds:
         - lab-irr-data.rpsl:/etc/irrd/lab-irr-data.rpsl
       exec:
@@ -63,7 +66,7 @@ topology:
       image: bgpq4-utils
       exec:
         - ip addr add 10.0.0.6/31 dev eth1
-        - ip route add default via 10.0.0.7
+        - ip route add 10.0.0.0/29 via 10.0.0.7
 
   links:
     # AS100 (ISP-A) ↔ AS300 (Transit)

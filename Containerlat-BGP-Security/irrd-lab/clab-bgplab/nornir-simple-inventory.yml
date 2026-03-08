@@ -1,0 +1,26 @@
+---
+as100:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.20.30.5
+as200:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.20.30.3
+as300:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.20.30.6
+bgpq4:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.20.30.4
+irrd:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.20.30.2
