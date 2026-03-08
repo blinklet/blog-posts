@@ -6,7 +6,6 @@
 FROM python:3.14-slim-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PGDATA=/var/lib/postgresql/data \
     IRRD_CONFIG=/etc/irrd.yaml
 
 # Install PostgreSQL, Redis, and build dependencies for IRRd
@@ -24,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-dev \
         rustc \
         cargo \
+        apache2-utils \
     && pip install --no-cache-dir irrd \
     && apt-get purge -y gcc python3-dev rustc cargo \
     && apt-get autoremove -y \
