@@ -3,12 +3,9 @@ set -e
 
 echo "=== IRRd Lab Container Starting ==="
 
-PGBIN="$(dirname "$(command -v initdb 2>/dev/null || true)")"
-if [ -z "$PGBIN" ] || [ "$PGBIN" = "." ] || [ ! -x "$PGBIN/initdb" ]; then
-    PGBIN="$(dirname "$(find /usr/lib/postgresql -type f -name initdb 2>/dev/null | head -n 1)")"
-fi
-if [ -z "$PGBIN" ] || [ "$PGBIN" = "." ] || [ ! -x "$PGBIN/initdb" ]; then
-    echo "ERROR: could not locate PostgreSQL binaries (initdb)."
+PGBIN="/usr/lib/postgresql/17/bin"
+if [ ! -x "$PGBIN/initdb" ]; then
+    echo "ERROR: expected PostgreSQL binaries at $PGBIN, but initdb was not found."
     exit 127
 fi
 mkdir -p /var/log/irrd

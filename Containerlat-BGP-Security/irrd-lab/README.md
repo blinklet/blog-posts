@@ -109,5 +109,10 @@ $ sudo containerlab destroy -t topology.yml
 
 ## Other clab exec commands
 
+```
 clab exec -t topology.yml --label clab-node-name=bgpq4 --cmd 'whois -h 10.0.0.4 AS300'
 clab exec -t topology.yml --label clab-node-name=bgpq4 --cmd 'whois -h 10.0.0.4 -i mnt-by LAB-MNT'
+
+docker exec -it clab-bgplab-bgpq4 /bin/bash
+```
+
