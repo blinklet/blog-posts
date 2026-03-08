@@ -87,11 +87,7 @@ echo "RPSL data loaded."
 # Bootstrap fixed Web UI admin user (no SMTP required)
 # ------------------------------------------------------------------
 echo "Creating IRRd Web UI admin user: test@irrtest.com"
-WEBUI_PASSWORD_HASH="$(python - <<'PY'
-from passlib.hash import bcrypt
-print(bcrypt.hash("mypassword"))
-PY
-)"
+WEBUI_PASSWORD_HASH="$(htpasswd -bnBC 12 "" "mypassword" | tr -d ':\n')"
 
 su - postgres -c "/usr/lib/postgresql/17/bin/psql -d irrd -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO auth_user (email, name, password, active, override)

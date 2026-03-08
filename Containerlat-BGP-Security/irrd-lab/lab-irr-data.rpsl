@@ -1,3 +1,16 @@
+aut-num:        AS300
+as-name:        TRANSIT
+descr:          Transit provider - applies prefix filters
+admin-c:        LAB-ADMIN
+mnt-by:         LAB-MNT
+source:         LABRIR
+
+route:          100.64.0.0/24
+descr:          Transit provider prefix
+origin:         AS300
+mnt-by:         LAB-MNT
+source:         LABRIR
+
 aut-num:        AS100
 as-name:        ISP-A
 descr:          ISP-A - Legitimate prefix holder

@@ -18,14 +18,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         netcat-openbsd \
         procps \
         curl \
+        apache2-utils \
         gcc \
         libpq-dev \
         python3-dev \
         rustc \
         cargo \
-        apache2-utils \
     && pip install --no-cache-dir irrd \
-    && apt-get purge -y gcc python3-dev rustc cargo \
+    && apt-get purge -y gcc python3-dev rustc cargo libpq-dev \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -47,8 +47,8 @@ RUN chmod +x /entrypoint.sh
 # Bind-mount host directory with RPSL files to /etc/irrd/data
 # VOLUME ["/etc/irrd/data"]
 
-# Expose the WHOIS port
 EXPOSE 43
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
     CMD sh -ec "pg_isready -q && redis-cli ping | grep -q PONG && nc -z 127.0.0.1 43"

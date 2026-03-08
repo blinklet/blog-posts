@@ -3,24 +3,24 @@ as100:
     username: 
     password: 
     platform: linux
-    hostname: 172.20.30.5
+    hostname: 172.20.30.6
 as200:
     username: 
     password: 
     platform: linux
-    hostname: 172.20.30.3
+    hostname: 172.20.30.2
 as300:
     username: 
     password: 
     platform: linux
-    hostname: 172.20.30.6
+    hostname: 172.20.30.5
 bgpq4:
     username: 
     password: 
     platform: linux
-    hostname: 172.20.30.4
+    hostname: 172.20.30.3
 irrd:
     username: 
     password: 
     platform: linux
-    hostname: 172.20.30.2
+    hostname: 172.20.30.4

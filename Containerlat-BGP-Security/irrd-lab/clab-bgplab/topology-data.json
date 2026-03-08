@@ -6,7 +6,7 @@
       "prefix": "clab",
       "mgmt": {
         "network": "mgmt-bgplab",
-        "bridge": "br-ebd542ec89db",
+        "bridge": "br-e5ef47dab164",
         "ipv4-subnet": "172.20.30.0/24",
         "ipv4-gw": "172.20.30.1",
         "external-access": true
@@ -26,13 +26,13 @@
       "image": "quay.io/frrouting/frr:10.5.1",
       "mgmt-net": "",
       "mgmt-intf": "",
-      "mgmt-ipv4-address": "172.20.30.5",
+      "mgmt-ipv4-address": "172.20.30.6",
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "",
       "mgmt-ipv6-prefix-length": 0,
       "mac-address": "",
       "labels": {
-        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-mgmt-net-bridge": "br-e5ef47dab164",
         "clab-node-group": "",
         "clab-node-kind": "linux",
         "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as100",
@@ -57,13 +57,13 @@
       "image": "quay.io/frrouting/frr:10.5.1",
       "mgmt-net": "",
       "mgmt-intf": "",
-      "mgmt-ipv4-address": "172.20.30.3",
+      "mgmt-ipv4-address": "172.20.30.2",
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "",
       "mgmt-ipv6-prefix-length": 0,
       "mac-address": "",
       "labels": {
-        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-mgmt-net-bridge": "br-e5ef47dab164",
         "clab-node-group": "",
         "clab-node-kind": "linux",
         "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as200",
@@ -88,13 +88,13 @@
       "image": "quay.io/frrouting/frr:10.5.1",
       "mgmt-net": "",
       "mgmt-intf": "",
-      "mgmt-ipv4-address": "172.20.30.6",
+      "mgmt-ipv4-address": "172.20.30.5",
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "",
       "mgmt-ipv6-prefix-length": 0,
       "mac-address": "",
       "labels": {
-        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-mgmt-net-bridge": "br-e5ef47dab164",
         "clab-node-group": "",
         "clab-node-kind": "linux",
         "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/as300",
@@ -119,13 +119,13 @@
       "image": "bgpq4-utils",
       "mgmt-net": "",
       "mgmt-intf": "",
-      "mgmt-ipv4-address": "172.20.30.4",
+      "mgmt-ipv4-address": "172.20.30.3",
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "",
       "mgmt-ipv6-prefix-length": 0,
       "mac-address": "",
       "labels": {
-        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-mgmt-net-bridge": "br-e5ef47dab164",
         "clab-node-group": "",
         "clab-node-kind": "linux",
         "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/bgpq4",
@@ -150,13 +150,13 @@
       "image": "irrd-lab",
       "mgmt-net": "",
       "mgmt-intf": "",
-      "mgmt-ipv4-address": "172.20.30.2",
+      "mgmt-ipv4-address": "172.20.30.4",
       "mgmt-ipv4-prefix-length": 24,
       "mgmt-ipv6-address": "",
       "mgmt-ipv6-prefix-length": 0,
       "mac-address": "",
       "labels": {
-        "clab-mgmt-net-bridge": "br-ebd542ec89db",
+        "clab-mgmt-net-bridge": "br-e5ef47dab164",
         "clab-node-group": "",
         "clab-node-kind": "linux",
         "clab-node-lab-dir": "/home/blinklet/Projects/blog-posts/Containerlat-BGP-Security/irrd-lab/clab-bgplab/irrd",
@@ -201,13 +201,13 @@
         "a": {
           "node": "as100",
           "interface": "eth1",
-          "mac": "aa:c1:ab:93:31:28",
+          "mac": "aa:c1:ab:91:d0:8f",
           "peer": "z"
         },
         "z": {
           "node": "as300",
           "interface": "eth1",
-          "mac": "aa:c1:ab:b1:8a:d5",
+          "mac": "aa:c1:ab:21:bf:03",
           "peer": "a"
         }
       }
@@ -217,13 +217,13 @@
         "a": {
           "node": "as200",
           "interface": "eth1",
-          "mac": "aa:c1:ab:4b:2f:b3",
+          "mac": "aa:c1:ab:98:ba:68",
           "peer": "z"
         },
         "z": {
           "node": "as300",
           "interface": "eth2",
-          "mac": "aa:c1:ab:f7:29:99",
+          "mac": "aa:c1:ab:c2:e7:1a",
           "peer": "a"
         }
       }
@@ -233,13 +233,13 @@
         "a": {
           "node": "irrd",
           "interface": "eth1",
-          "mac": "aa:c1:ab:f2:0f:fd",
+          "mac": "aa:c1:ab:17:dc:d3",
           "peer": "z"
         },
         "z": {
           "node": "as300",
           "interface": "eth3",
-          "mac": "aa:c1:ab:67:78:fb",
+          "mac": "aa:c1:ab:27:78:1b",
           "peer": "a"
         }
       }
@@ -249,13 +249,13 @@
         "a": {
           "node": "bgpq4",
           "interface": "eth1",
-          "mac": "aa:c1:ab:8e:dc:93",
+          "mac": "aa:c1:ab:48:a5:41",
           "peer": "z"
         },
         "z": {
           "node": "as300",
           "interface": "eth4",
-          "mac": "aa:c1:ab:15:d0:7e",
+          "mac": "aa:c1:ab:c1:69:6a",
           "peer": "a"
         }
       }

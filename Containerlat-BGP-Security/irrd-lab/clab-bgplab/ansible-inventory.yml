@@ -8,12 +8,12 @@ all:
     linux:
       hosts:
         clab-bgplab-as100:
-          ansible_host: 172.20.30.5
-        clab-bgplab-as200:
-          ansible_host: 172.20.30.3
-        clab-bgplab-as300:
           ansible_host: 172.20.30.6
-        clab-bgplab-bgpq4:
-          ansible_host: 172.20.30.4
-        clab-bgplab-irrd:
+        clab-bgplab-as200:
           ansible_host: 172.20.30.2
+        clab-bgplab-as300:
+          ansible_host: 172.20.30.5
+        clab-bgplab-bgpq4:
+          ansible_host: 172.20.30.3
+        clab-bgplab-irrd:
+          ansible_host: 172.20.30.4

@@ -67,6 +67,7 @@ topology:
       exec:
         - ip addr add 10.0.0.6/31 dev eth1
         - ip route add 10.0.0.0/29 via 10.0.0.7
+        - sh -c 'echo "10.0.0.4 irrdatabase.com" >> /etc/hosts'
 
   links:
     # AS100 (ISP-A) ↔ AS300 (Transit)
