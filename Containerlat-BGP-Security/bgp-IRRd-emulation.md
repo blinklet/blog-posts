@@ -1,3 +1,9 @@
+Example of how RPSL data is submitted to ARIN
+https://www.arin.net/resources/manage/irr/?utm_source=chatgpt.com#submitting-routing-information
+
+
+
+
 # Emulating an IRR Database with IRRd, bgpq4, and Containerlab for BGP Prefix Filter Testing
 
 Every day, Internet service providers make trust decisions about which routes to accept from their BGP peers. One of the most important tools they use is the Internet Routing Registry, or IRR — a public database where network operators register which IP prefixes they are authorized to announce. When a BGP neighbor sends a route advertisement, the receiving router checks whether that announcement matches what is registered in the IRR. If it does not match, the route is filtered out.
@@ -122,8 +128,7 @@ Create the file *irrd-lab/Dockerfile.irrd*:
 
 FROM python:3.14-slim-trixie
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    IRRD_CONFIG=/etc/irrd.yaml
+ENV DEBIAN_FRONTEND=noninteractive 
 
 # Install PostgreSQL, Redis, and build dependencies for IRRd
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,88 +1,48 @@
-% Emulating an IRR Database for Prefix Filter Testing
+% Building IRRd and bgpq4 Docker Containers for Network Labs
 
 
+To demonstrate basic BGP security practices in a network emulator, in a way that emulates real-world conditions, researchers need to emulate an [Internet Routing Registry (IRR)](https://www.arin.net/resources/manage/irr/?utm_source=chatgpt.com#submitting-routing-information) database server and a network management workstation running software utilities like [bgpq4](https://github.com/bgp/bgpq4). I was not able to find a ready-to-use container image that supports either of these functions, so I created them.
 
-Every day, Internet service providers make trust decisions about which routes to accept from their BGP peers. One of the most important tools they use is the Internet Routing Registry, or IRR — a public database where network operators register which IP prefixes they are authorized to announce. When a BGP neighbor sends a route advertisement, the receiving router checks whether that announcement matches what is registered in the IRR. If it does not match, the route is filtered out.
+In this post, I walk through the process of building reusable container images that can be dropped into any network emulator that supports Docker containers, such as[Containerlab](https://containerlab.dev/), [GNS3](https://www.gns3.com/), or[Kathará](https://www.kathara.org/), etc. I also show how I published the containers in a public repository.
 
-The standard tool for building these filters is [bgpq4](https://github.com/bgp/bgpq4), a command-line utility that queries IRR servers like [RADB](https://www.radb.net/) and generates router filter configurations automatically. Together, IRR data and bgpq4 form the most widely deployed BGP security mechanism on the Internet today. Yet most network engineers have never set up an IRR server themselves, and many have never seen how bgpq4 queries translate into working router filters.
+## IRRd and bgpq4
 
-In this post, I will show you how to run your own IRR server using [IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) — the same software that powers production registries like RADB — entirely inside a [Containerlab](https://containerlab.dev/) lab environment. I will populate the IRR database with routing policy objects for a small three-AS network, use bgpq4 to generate [FRR](https://frrouting.org/) prefix-list filters from that data, and then demonstrate how those filters prevent a BGP peer from announcing prefixes it does not own.
+[IRRd (Internet Routing Registry daemon) version 4](https://irrd.readthedocs.io) is a widely used software program for maintaining and serving IRR data. For example, you can directly see it running at [ntt.net](https://rr.ntt.net/ui/), which is a tier-1 global IP backbone provider, and it also powers industry-standard registries like [RADB](https://www.radb.net/). 
 
-Running your own IRRd instance means you can experiment freely: register any prefix, create any AS number, and test filter behavior without touching production infrastructure. Everything runs locally in containers on a single Linux host.
+[Bgpq4](https://github.com/bgp/bgpq4) is a command-line tool used by network engineers to query an IRR server and generate BGP prefix-list configurations for most router platforms.
 
-By the end of this post, you will have a re-usable container that runs the IRRd server and can be used to demonstrate IRR-based filtering workflows: from registering routing policy objects, to generating filters with bgpq4.
+### Design decisions
 
-## Background: IRR, RPSL, IRRd, and bgpq4
+The IRRd container will bundle PostgreSQL, Redis, and IRRd in a single "all-in-one" image. This is not the recommended pattern for production, but it keeps lab topologies simple. there will be one node instead of three, and no Docker Compose file will be needed.
 
-Before building the lab, it helps to understand the four components we will be working with: the Internet Routing Registry system, the language used to describe routing policy, the server software that hosts the registry, and the tool that turns registry data into router configurations.
+The bgpq4 container is built on top of a lightweight Debian image and includes bgpq4 and common network utilities. This container can act as a network management workstation.
 
-### What is an Internet Routing Registry?
+## Building the IRRd container image
 
-An Internet Routing Registry (IRR) is a database where network operators publish information about their routing policy. The data is expressed in a format called RPSL — Routing Policy Specification Language, defined in [RFC 2622](https://www.rfc-editor.org/rfc/rfc2622). The most important object types for prefix filtering are:
-
-- **route** objects — map an IP prefix to the AS number authorized to originate it (for example, "198.51.100.0/24 is originated by AS100")
-- **aut-num** objects — describe an autonomous system and its peering policies
-- **as-set** objects — group multiple AS numbers together under a single name (for example, "AS-ISP-A contains AS100 and AS101"), which lets operators define filters for customers who have their own downstream customers
-
-IRR databases are operated by the five Regional Internet Registries (ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC) and by independent registries such as [RADB](https://www.radb.net/) and NTT's registry. Network operators query these registries to learn which prefixes each BGP peer is authorized to announce, and then build prefix filters from that data.
-
-### What is IRRd?
-
-[IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) is open-source software that implements a full-featured IRR server. It is the same software that runs behind production registries like RADB. IRRd version 4 — the current release as of early 2026 — is maintained by [Reliably Coded](https://www.reliably.com/) with support from NTT, ARIN, and the community.
-
-IRRd provides a WHOIS query interface on TCP port 43, which is the protocol that tools like bgpq4 use to retrieve routing policy data. Internally, it stores RPSL objects in a [PostgreSQL](https://www.postgresql.org/) database and uses [Redis](https://redis.io/) for inter-process communication. IRRd can operate in two modes: as an *authoritative* source that accepts local submissions (this is what we will use), or as a *mirror* that replicates data from other IRR databases.
-
-For our lab, we will configure IRRd with a single authoritative source named `LABRIR` and load a small set of RPSL objects that represent our three-AS network. The full production deployment guide recommends 32 GB of RAM and 150 GB of storage, but those figures are for mirroring the entire Internet routing registry. Our lab has fewer than 20 objects and will run comfortably with minimal resources.
-
-### What is bgpq4?
-
-[bgpq4](https://github.com/bgp/bgpq4) is a command-line tool that queries an IRR server and generates router filter configurations. It supports output formats for Cisco IOS, Juniper JunOS, FRR, BIRD, Nokia, Mikrotik, Arista, Huawei, and others. By default, bgpq4 queries NTT's IRR mirror at `rr.ntt.net`, but the `-h` flag lets you point it at any IRR server — including our local IRRd instance.
-
-A typical bgpq4 command looks like this:
-
-```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
-```
-
-This tells bgpq4 to connect to the IRR server at `10.0.0.4`, query the `LABRIR` source, find all prefixes that AS100 is authorized to originate, and output an FRR-compatible prefix-list named `AS100-IN`. The result is a set of `ip prefix-list` statements that you can paste directly into an FRR router's configuration.
-
-### How the pieces fit together
-
-The workflow mirrors what real-world network operators do every day:
-
-1. Network operators register their prefixes in an IRR by creating **route** objects (stored and served by IRRd)
-2. A neighboring operator runs **bgpq4** to query the IRR and generate prefix-list filters for each BGP peer
-3. The operator applies those filters to the **FRR** (or other) router, which then only accepts route announcements that match the registered data
-
-The only difference in our lab is that all three components — the IRR server, the filter generation tool, and the routers — run locally inside containers managed by Containerlab.
-
-
-
-### Design Notes
-
-The IRRd server runs PostgreSQL, Redis, and IRRd together in a single "all-in-one" container. Bundling multiple services into one container is not the recommended Docker pattern for production, but it is pragmatic for a lab. It keeps the lab topologies simple, with one node instead of three to create the IRRd server. In production, IRRd, PostgreSQL, and Redis would each run as separate services.
-
-The bgpq4 utility container is a lightweight Debian container with the `bgpq4` package installed. It is intended to reach the IRRd server similar to how a network management station on an operator's network would query public IRR servers. Running bgpq4 inside the topology means everything the lab needs is self-contained.
-
-## Building the IRRd Container Image
-
-IRRd does not publish an official Docker image. The [deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/) describes a native installation with PostgreSQL and Redis as separate services. Since we want everything in a single lab topology, with no Docker Compose and no external services, we will build a custom all-in-one container that bundles PostgreSQL, Redis, and IRRd together.
-
-We will create three files: a Dockerfile, an entrypoint script, and an IRRd configuration file.
+The IRRd image requires four files: a Dockerfile, an entrypoint script, an IRRd configuration file, and a base RPSL data file. Place them all in a project directory (I used *irrd-lab/*).
 
 ### The Dockerfile
 
-The Dockerfile starts from `python:3.14-slim-trixie` (a Debian Trixie base with Python pre-installed), installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI using `pip`. Build dependencies like `gcc` and `rustc` (needed to compile some of IRRd's Python dependencies) are removed after installation to keep the image smaller. It also adds a Docker healthcheck and includes a basic RPSL data file in the image, to create a maintainer and password.
+The Dockerfile starts from `python:3.14-slim-trixie`, installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI. Build dependencies (`gcc`, `rustc`) are removed after installation to keep the image smaller.
 
-Create the file *irrd-lab/Dockerfile.irrd*:
+
+
+
+
+The [deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/)
+
+
+
+
+
+Create *Dockerfile.irrd*:
 
 ```dockerfile
 # All-in-one IRRd lab container
 
 FROM python:3.14-slim-trixie
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    IRRD_CONFIG=/etc/irrd.yaml
+ENV DEBIAN_FRONTEND=noninteractive 
 
 # Install PostgreSQL, Redis, and build dependencies for IRRd
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -109,7 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /var/log/irrd /var/run/irrd /etc/irrd /var/lib/irrd/gnupg \
     && chmod 700 /var/lib/irrd/gnupg
 
-# Make PostgreSQL binaries available on PATH (Debian Trixie defaults to PostgreSQL 17)
+# Make PostgreSQL binaries available on PATH
 ENV PATH="/usr/lib/postgresql/17/bin:${PATH}"
 
 # Copy configuration and entrypoint
@@ -132,13 +92,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 ```
 
-The image is intentionally self-contained: PostgreSQL data, Redis state, and IRRd logs all live inside the container. Since this is a disposable lab, we do not need persistent volumes.
+Every time the container starts fresh, it initializes a new database and loads the base RPSL data — no persistent volumes needed.
 
-### The Entrypoint Script
+### The entrypoint script
 
-The entrypoint script is the key to making the all-in-one container work. It starts each service in the correct order, waits for dependencies to become ready, and then starts IRRd in the foreground so that Docker can track the process.
+The entrypoint starts each service in order, waits for dependencies, then runs IRRd in the foreground.
 
-Create the file *irrd-lab/entrypoint.sh*:
+Create *entrypoint.sh*:
 
 ```bash
 #!/bin/bash
@@ -254,19 +214,15 @@ echo "=== IRRd Lab Container Ready ==="
 exec irrd --config /etc/irrd.yaml --foreground
 ```
 
-The script follows a strict startup sequence:
+The startup sequence is: PostgreSQL → Redis (no persistence) → schema migration → RPSL data load → IRRd foreground. The code comments explain each step.
 
-1. **PostgreSQL** starts first. The script initializes a fresh database cluster on the first run, tunes a few key parameters (`random_page_cost`, `work_mem`), and creates the `irrd` database with the required `pgcrypto` extension.
-2. **Redis** starts next with persistence disabled (the `--save ""` and `--appendonly no` flags) because lab data does not need to survive a container restart.
-3. **`irrd_database_upgrade`** runs the schema migration that creates IRRd's internal tables.
-4. If a file exists at */etc/irrd/lab-irr-base.rpsl* (either copied into the image or bind-mounted), the script loads those RPSL objects automatically using `irrd_load_database`. This is how we will populate the IRR with our lab's routing policy data.
-5. Finally, **IRRd** starts in the foreground with `--foreground`, so Docker sees it as the container's main process.
+> **Note:** The [IRRd deployment docs](https://irrd.readthedocs.io/en/stable/admins/deployment/#postgresql-configuration) recommend creating a dedicated `irrd` database role with a password and explicit grants. That is the right approach for production. In this lab container, PostgreSQL is local and disposable, so the entrypoint connects as the `postgres` superuser with `trust` authentication to keep things simple.
 
-### The IRRd Configuration File
+### The IRRd configuration file
 
-IRRd reads its configuration from a YAML file. The [full configuration reference](https://irrd.readthedocs.io/en/stable/admins/configuration/) has dozens of options, but our lab needs very few of them.
+See the [full configuration reference](https://irrd.readthedocs.io/en/stable/admins/configuration/) for all options. A lab instance needs very few.
 
-Create the file *irrd-lab/irrd.yaml*:
+Create *irrd.yaml*:
 
 ```yaml
 irrd:
@@ -319,73 +275,19 @@ irrd:
             authoritative_non_strict_mode_dangerous: true
 ```
 
-The key settings:
+Key settings:
 
-- **`database_url`** connects to the local PostgreSQL instance over localhost TCP using the `postgres` role (`postgresql://postgres@localhost/irrd`).
-- **`redis_url`** connects to the local Redis instance over TCP on localhost.
-- **`user`** and **`group`** run IRRd as the `postgres` user/group in this lab container.
-- **`server.http.interface: '0.0.0.0'`** and **`server.whois.interface: '0.0.0.0'`** make both interfaces reachable from outside the container network namespace.
-- **`server.whois.port: 43`** is the standard WHOIS port — the same port that bgpq4 queries by default.
-- **`server.http.workers: 1`** and **`server.whois.max_connections: 5`** keep memory usage low. Each WHOIS connection uses about 200–250 MB, so limiting to 5 connections keeps the lab under 2 GB.
-- **`rpki.roa_source: null`** disables RPKI integration entirely — that is for a future post.
-- **`sources.LABRIR`** defines our single authoritative source. The `authoritative: true` flag means this IRRd instance accepts local data submissions. The `authoritative_non_strict_mode_dangerous: true` flag relaxes RPSL validation, which makes it easier to load lab objects that may not have full referential integrity. The `keep_journal: true` flag enables change tracking.
-- **`auth.override_password`** sets an override password hash (for the password "lab") that can bypass authentication when loading data. The `set_creation` settings disable the requirement for `as-set` names to have an AS number prefix, which simplifies our lab objects.
+- Both `server.http.interface` and `server.whois.interface` bind to `0.0.0.0` so other lab nodes can reach the IRR server.
+- `server.whois.max_connections: 5` and `server.http.workers: 1` keep memory usage low (each WHOIS connection uses ~200 MB).
+- `rpki.roa_source: null` disables RPKI integration.
+- `sources.LABRIR` is configured as authoritative with `authoritative_non_strict_mode_dangerous: true` to relax RPSL validation for lab objects.
+- `auth.override_password` is the MD5 hash of "mypassword", used for bypassing authentication when loading data.
 
-### Building the Image
+### The base RPSL data file
 
-With all three files in the *irrd-lab/* directory, build the Docker image:
+IRRd needs at least a maintainer object to function as an authoritative source. This file seeds the database with a maintainer and an administrative contact.
 
-```bash
-$ cd irrd-lab
-$ docker build -t irrd-lab -f Dockerfile.irrd .
-```
-
-The build takes several minutes because IRRd has many Python dependencies (including some that require compilation). Once built, the image is cached locally and does not need to be rebuilt unless you change the Dockerfile.
-
-### Checking Container Health
-
-The image defines a Docker `HEALTHCHECK` that verifies three things:
-
-- PostgreSQL is accepting connections (`pg_isready -q`)
-- Redis is responding (`redis-cli ping` returns `PONG`)
-- IRRd's WHOIS listener is up on TCP port 43 (`nc -z 127.0.0.1 43`)
-
-Check health status with:
-
-```bash
-$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
-$ docker inspect --format '{{json .State.Health}}' <container_name>
-```
-
-A brief initial `starting` state, or even one failed probe while services initialize, can be normal.
-
-### Troubleshooting
-
-If the IRRd container fails to start, the most common issues are:
-
-- **PostgreSQL pgcrypto extension not created** — The entrypoint runs `CREATE EXTENSION IF NOT EXISTS pgcrypto` as a superuser. If you see errors about missing functions, check the PostgreSQL log: `docker exec clab-...-irrd cat /var/log/irrd/postgresql.log`
-- **Redis connection refused** — Verify Redis started successfully: `docker exec clab-...-irrd redis-cli ping` should return `PONG`
-- **IRRd configuration errors** — IRRd validates its configuration on startup and will refuse to start if it finds problems. Check the container logs: `docker logs clab-...-irrd`
-- **Slow startup** — The all-in-one container needs 15–30 seconds to initialize PostgreSQL, run migrations, load RPSL data, and start IRRd. If you query the WHOIS port before IRRd is ready, the connection will be refused. Wait for the "IRRd Lab Container Ready" message in the logs.
-- **`docker inspect` template error** — If you run `docker inspect --format '{{json .State.Health}}' irrd-lab` and `irrd-lab` is an image name (not a container name), Docker returns a template error like `map has no entry for key "State"`. Use the running container name instead.
-
-## Populating the IRR Database
-
-With the container image built, we need routing policy data for it to serve. In production, IRR databases contain millions of objects registered by thousands of network operators. Our lab needs only a handful: enough to represent three autonomous systems and their authorized prefixes.
-
-### The RPSL Objects File
-
-RPSL (Routing Policy Specification Language) uses a simple text format: each object is a block of `attribute: value` lines, with a blank line between objects. We need four types of objects for our lab:
-
-- A **mntner** (maintainer) object that provides authentication — required by IRRd for any authoritative source
-- A **person** object for the administrative contact (referenced by the maintainer)
-- Three **aut-num** objects describing AS100, AS200, and AS300
-- Two **as-set** objects that group ASes together (AS-ISP-A and AS-ISP-B) — these are what bgpq4 expands when generating filters for customers with downstream networks
-- Three **route** objects that map each prefix to its authorized origin AS
-
-The critical detail is what we *do not* register: there is no route object for 198.51.100.0/24 with origin AS200. This is the gap that the prefix filter will enforce — when AS200 later tries to announce that prefix, bgpq4's filter will block it because the IRR has no matching registration.
-
-Create the file *irrd-lab/lab-irr-base.rpsl*:
+Create *lab-irr-base.rpsl*:
 
 ```
 mntner:         LAB-MNT
@@ -404,79 +306,41 @@ mnt-by:         LAB-MNT
 source:         LABRIR
 ```
 
-A few things to note about these objects:
+All objects use **`LAB-MNT`** as their maintainer with the MD5 hash of "mypassword" (matching the override password in *irrd.yaml*). The **`source: LABRIR`** value must exactly match the source name in the IRRd configuration. When you use the container in an actual lab, you will load additional route, aut-num, and as-set objects describing your lab's routing policy.
 
-- All objects reference **`LAB-MNT`** as their maintainer and use the same MD5 password hash. In a real IRR, each organization would have its own maintainer with its own credentials. For a lab, a single shared maintainer keeps things simple.
-- The **`auth: MD5-PW`** line contains a salted MD5 hash of the password "mypassword". This matches the override password in our *irrd.yaml* configuration.
-- Every object includes **`source: LABRIR`**, which must exactly match the source name defined in the IRRd configuration (case-sensitive).
-- The **as-set** objects (AS-ISP-A and AS-ISP-B) each contain a single member AS. In practice, an ISP's as-set might contain dozens of customer ASes. bgpq4 recursively expands as-set membership to find all authorized prefixes — this is how operators build filters for transit customers who have their own downstream networks.
+### Building the IRRd image
 
-### Loading the Data
-
-The entrypoint script we created in Part 4 automatically loads RPSL data from */etc/irrd/lab-irr-base.rpsl* if the file exists. When we build the Containerlab topology in a later section, we will bind-mount this file into the container. The entrypoint runs:
+Build the Docker image (takes several minutes due to compiled Python dependencies):
 
 ```bash
-irrd_load_database --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
+$ cd irrd-lab
+$ docker build -t irrd-lab -f Dockerfile.irrd .
 ```
 
-The `irrd_load_database` command performs a bulk import that replaces all existing objects in the specified source with the contents of the file. This is the same mechanism production IRR operators use to load full database snapshots. For our lab, it loads all 11 objects in a single operation.
+### Checking container health
 
-If you need to reload the data after the lab is running (for example, after editing the RPSL file), you can run the command manually:
+The `HEALTHCHECK` verifies PostgreSQL, Redis, and IRRd's WHOIS listener are all running:
 
 ```bash
-$ docker exec clab-bgplab-irrd irrd_load_database \
-    --config /etc/irrd.yaml --source LABRIR /etc/irrd/lab-irr-base.rpsl
+$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+$ docker inspect --format '{{json .State.Health}}' <container_name>
 ```
 
-### Verifying the Data
+A brief `starting` state or one failed probe during initialization is normal.
 
-Once the IRRd container is running and the data is loaded, you can verify it from the separate bgpq4 utility container. This confirms the IRRd node is reachable at its topology IP, not just from inside the IRRd container itself. The WHOIS protocol is text-based: you send a query string over TCP to port 43 and receive the matching objects in plain text.
+### Troubleshooting
 
-Query for all route objects registered to AS100:
+- **PostgreSQL issues** — Check `docker exec <container_name> cat /var/log/irrd/postgresql.log`
+- **Redis connection refused** — Verify with `docker exec <container_name> redis-cli ping`
+- **IRRd config errors** — Check `docker logs <container_name>`
+- **Slow startup** — Allow 15–30 seconds; wait for the "IRRd Lab Container Ready" log message
+- **`docker inspect` template error** — Use the container name, not the image name
 
-```bash
-$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "-i origin AS100" | nc 10.0.0.4 43'
-```
+## Building the bgpq4 utility container image
 
-Expected output:
+This lightweight Debian image provides bgpq4 and common network tools. It uses `sleep infinity` to stay running in a lab topology.
 
-```
-route:          198.51.100.0/24
-descr:          ISP-A prefix
-origin:         AS100
-mnt-by:         LAB-MNT
-source:         LABRIR
-```
-
-Query for a specific prefix:
-
-```bash
-$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "198.51.100.0/24" | nc 10.0.0.4 43'
-```
-
-Expand the AS-ISP-A set using IRRd's extended query syntax (the `!i` command):
-
-```bash
-$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "!iAS-ISP-A" | nc 10.0.0.4 43'
-```
-
-Expected output:
-
-```
-A100
-```
-
-This confirms that IRRd has loaded the data and is serving it correctly over the WHOIS protocol — exactly as bgpq4 will query it when we generate prefix filters.
-
-## Using bgpq4 to Generate Prefix Filters
-
-With a working IRRd server full of RPSL objects, we can now do what real network operators do every day: use [bgpq4](https://github.com/bgp/bgpq4) to query the registry and automatically generate router prefix-list configurations. This is the step where IRR data becomes actionable — bgpq4 reads the registry, finds which prefixes each AS is authorized to announce, and produces configuration snippets that FRR can apply directly.
-
-### Building the bgpq4 Utility Container
-
-Rather than installing bgpq4 on the host, we will run it inside a lightweight utility container that is part of the Containerlab topology. This keeps the entire lab self-contained — everything runs with `containerlab deploy`.
-
-The Dockerfile is minimal. It installs bgpq4 from Debian's package repository plus query tools (`nc` and `whois`), and uses `sleep infinity` to keep the container running. Create the file *irrd-lab/Dockerfile.bgpq4*:
+Create *Dockerfile.bgpq4*:
 
 ```dockerfile
 # Linux container with bgpq4 and other utilities
@@ -506,134 +370,164 @@ $ cd irrd-lab
 $ docker build -t bgpq4-utils -f Dockerfile.bgpq4 .
 ```
 
-The bgpq4 container will be connected to Transit's network in the Containerlab topology, giving it a Layer 3 path to the IRRd server. We will run bgpq4 commands inside this container using `docker exec`.
+This build takes only a few seconds.
 
-### Generating FRR Prefix Filters
+## Testing the containers with Docker
 
-bgpq4's default output format is Cisco IOS style, which FRR also accepts. To generate a prefix-list for the routes AS100 is authorized to announce, we query our lab IRRd server and use the AS-ISP-A *as-set* as the query target. The `-h` flag points bgpq4 to our IRRd server instead of the default public server (rr.ntt.net), and `-S` selects the LABRIR source. We run the command inside the bgpq4 utility container using `docker exec`:
+Verify the containers work together using plain Docker (no network emulator required).
 
-```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
-```
+### Start the containers
 
-Expected output:
-
-```
-no ip prefix-list AS100-IN
-ip prefix-list AS100-IN permit 198.51.100.0/24
-```
-
-Now generate the prefix-list for AS200:
+Create a Docker network and start both containers:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+$ docker network create irr-test-net
+$ docker run -d --name irrd-test --network irr-test-net irrd-lab
+$ docker run -d --name bgpq4-test --network irr-test-net bgpq4-utils
 ```
 
-Expected output:
-
-```
-no ip prefix-list AS200-IN
-ip prefix-list AS200-IN permit 203.0.113.0/24
-```
-
-We query using the *as-set* names (AS-ISP-A, AS-ISP-B) rather than the AS numbers directly. bgpq4 recursively expands the as-set membership — it finds that AS-ISP-A contains AS100, then looks up all route objects with `origin: AS100`. In our simple lab this produces the same result as querying `AS100` directly, but in production an ISP's as-set might contain dozens of customer ASes, each with their own prefixes. Querying the as-set captures them all in one pass.
-
-You can also query with the AS number directly to see the same result:
+Wait for the IRRd container to finish initializing (15–30 seconds):
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
+$ docker logs -f irrd-test 2>&1 | grep -m1 "IRRd Lab Container Ready"
 ```
 
+### Verify the WHOIS service
 
-
-### Automation Script
-
-In production, network operators typically automate filter generation. They run bgpq4 on a schedule (often via cron), generate updated prefix-lists from the IRR, and push them to their routers. We can demonstrate this workflow with a simple shell script that runs bgpq4 inside the utility container and applies the resulting filters to AS300.
-
-
-Make the script executable:
+Query the IRRd server from the bgpq4 container:
 
 ```bash
-$ chmod +x irrd-lab/generate-filters.sh
+$ docker exec bgpq4-test sh -c 'echo "-i origin AS100" | nc irrd-test 43'
 ```
 
-We will use this script after deploying the Containerlab topology in the next section. This is exactly the workflow real operators use — the only difference is that they query public IRR servers like RADB instead of a local lab instance, and they push configurations via NETCONF or SSH rather than `docker exec`.
-
-
-
-### Deploy and Verify
-
-
-First, build both container images (if you have not already):
+This query returns no results because only the base RPSL data is loaded (no route objects) — the important thing is that the connection succeeds. Verify the maintainer object is present:
 
 ```bash
-$ cd irrd-lab
-$ docker build -t irrd-lab -f Dockerfile.irrd .
-$ docker build -t bgpq4-utils -f Dockerfile.bgpq4 .
+$ docker exec bgpq4-test sh -c 'echo "LAB-MNT" | nc irrd-test 43'
 ```
 
-Deploy the entire lab with a single command:
+This should return the `LAB-MNT` maintainer object.
+
+### Loading additional RPSL data
+
+Load additional RPSL objects into the running container:
 
 ```bash
-$ sudo containerlab deploy -t topology.yml
+$ docker cp my-lab-data.rpsl irrd-test:/tmp/lab-data.rpsl
+$ docker exec irrd-test irrd_load_database \
+    --config /etc/irrd.yaml --source LABRIR /tmp/lab-data.rpsl
 ```
 
-This brings up all five containers: three FRR routers, the IRRd server, and the bgpq4 utility container. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
+The `irrd_load_database` command performs a bulk import that replaces all existing objects in the specified source.
+
+### Clean up the test
 
 ```bash
-$ docker logs -f clab-bgplab-irrd 2>&1 | grep -m1 "IRRd Lab Container Ready"
+$ docker stop irrd-test bgpq4-test
+$ docker rm irrd-test bgpq4-test
+$ docker network rm irr-test-net
 ```
 
+## Publishing the images
 
+Publish to a container registry for easy re-use. I show Docker Hub below; the process is similar for [GitHub Container Registry](https://ghcr.io/).
 
-## Applying IRR-Based Prefix Filters
+### Tag and push to Docker Hub
 
-Now for the payoff: we will use bgpq4 to query our IRRd server, generate prefix-lists, and apply them to AS300. This is the step where IRR data translates into working router filters that control which BGP announcements AS300 accepts from each peer.
-
-### Generating and Applying the Filters
-
-You can apply the filters manually or use the automation script we created earlier. Let's walk through the manual process first so you can see exactly what happens at each step.
-
-Generate the prefix-list for AS100 by querying the IRRd server from the bgpq4 utility container:
+Replace `yourusername` with your Docker Hub account name:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
+$ docker tag irrd-lab yourusername/irrd-lab:latest
+$ docker tag bgpq4-utils yourusername/bgpq4-utils:latest
 ```
 
-```
-no ip prefix-list AS100-IN
-ip prefix-list AS100-IN permit 198.51.100.0/24
-```
-
-Generate the prefix-list for AS200:
+Optionally add version tags:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+$ docker tag irrd-lab yourusername/irrd-lab:v1.0
+$ docker tag bgpq4-utils yourusername/bgpq4-utils:v1.0
 ```
 
-```
-no ip prefix-list AS200-IN
-ip prefix-list AS200-IN permit 203.0.113.0/24
+Push:
+
+```bash
+$ docker login
+$ docker push yourusername/irrd-lab:latest
+$ docker push yourusername/bgpq4-utils:latest
 ```
 
+### Pushing to GitHub Container Registry
 
+```bash
+$ docker tag irrd-lab ghcr.io/yourusername/irrd-lab:latest
+$ docker tag bgpq4-utils ghcr.io/yourusername/bgpq4-utils:latest
+$ echo $GITHUB_TOKEN | docker login ghcr.io -u yourusername --password-stdin
+$ docker push ghcr.io/yourusername/irrd-lab:latest
+$ docker push ghcr.io/yourusername/bgpq4-utils:latest
+```
+
+After pushing, set the packages to public visibility in your GitHub account settings if you want others to pull them without authentication.
+
+## Using the containers in lab topologies
+
+Reference the images by name in any Docker-capable network emulator.
+
+**Containerlab** topology file:
+
+```yaml
+topology:
+  nodes:
+    irrd:
+      kind: linux
+      image: yourusername/irrd-lab:latest
+    bgpq4:
+      kind: linux
+      image: yourusername/bgpq4-utils:latest
+```
+
+In a **GNS3** environment, add the Docker images as node templates through the GUI.
+
+**Docker Compose**:
+
+```yaml
+services:
+  irrd:
+    image: yourusername/irrd-lab:latest
+    networks:
+      - labnet
+  bgpq4:
+    image: yourusername/bgpq4-utils:latest
+    networks:
+      - labnet
+```
+
+The IRRd container listens on port 43 (WHOIS) and port 8080 (HTTP/Web UI). The bgpq4 container just needs network reachability to the IRRd container.
+
+### Loading lab-specific RPSL data
+
+The IRRd container starts with only the base maintainer and contact objects. To load your lab's routing policy data, you have two options:
+
+1. **Bind-mount a data file** — Mount your RPSL file into the container at */etc/irrd/data/lab-irr-base.rpsl* before it starts. The entrypoint script will load this file automatically during initialization.
+2. **Load data after startup** — Copy your RPSL file into the running container and run `irrd_load_database`:
+
+```bash
+$ docker cp lab-data.rpsl <container_name>:/tmp/lab-data.rpsl
+$ docker exec <container_name> irrd_load_database \
+    --config /etc/irrd.yaml --source LABRIR /tmp/lab-data.rpsl
+```
+
+I will demonstrate both approaches in a future post.
 
 ## Conclusion
 
-
-
-## Clean Up
-
-
+I built two Docker container images for network labs: an all-in-one IRRd server (WHOIS on port 43, web UI on port 8080) and a lightweight bgpq4 utility container. Both are self-contained and disposable, compatible with any Docker-capable network emulator. In a future post, I will use them in a complete BGP prefix filtering lab.
 
 ## Additional Resources
 
-- [IRRd Documentation](https://irrd.readthedocs.io/en/stable/) — Full reference for IRRd configuration and operation
-- [bgpq4 GitHub Repository](https://github.com/bgp/bgpq4) — Source code, documentation, and examples
+- [IRRd Documentation](https://irrd.readthedocs.io/en/stable/) — Full configuration and operation reference
+- [bgpq4 GitHub Repository](https://github.com/bgp/bgpq4) — Source code and examples
 - [RPSL RFC 2622](https://www.rfc-editor.org/rfc/rfc2622) — The Routing Policy Specification Language standard
 - [NLNOG BGP Filter Guide](http://bgpfilterguide.nlnog.net/) — Community guide for building BGP filters using IRR data
-- [MANRS Implementation Guide](https://www.manrs.org/resources/) — Best practices for routing security, including IRR registration and prefix filtering
-- [Containerlab Documentation](https://containerlab.dev/) — Containerlab installation, topology file reference, and examples
 
 
 
