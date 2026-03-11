@@ -21,21 +21,15 @@ The bgpq4 container is built on top of a lightweight Debian image and includes b
 
 The IRRd image requires four files: a Dockerfile, an entrypoint script, an IRRd configuration file, and a base RPSL data file. Place them all in a project directory (I used *irrd-lab/*).
 
-### The Dockerfile
+### The IRRd Dockerfile
 
-The Dockerfile starts from `python:3.14-slim-trixie`, installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI. Build dependencies (`gcc`, `rustc`) are removed after installation to keep the image smaller.
+The Dockerfile starts from `python:3.14-slim-trixie`. The [IRRd deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/) states that IRRd requires PostgreSQL and Redis. The Dockerfile installs PostgreSQL and Redis from Debian packages, then installs IRRd from PyPI. It also installs some helpful utilities. Build dependencies (`gcc`, `rustc`) are installed, but then are removed after installation to keep the image smaller.
 
+The Dockerfile then creates directories for IRRd and adds the PostgreSQL application to the system path. It also copies the configuration files and startup script into the container. 
 
+The Dockerfile also includes a `HEALTHCHECK` instruction. Docker will periodically run it and flag the container unhealthy if it fails.
 
-
-
-The [deployment documentation](https://irrd.readthedocs.io/en/stable/admins/deployment/)
-
-
-
-
-
-Create *Dockerfile.irrd*:
+The *Dockerfile.irrd* file is shown below:
 
 ```dockerfile
 # All-in-one IRRd lab container
@@ -96,7 +90,9 @@ Every time the container starts fresh, it initializes a new database and loads t
 
 ### The entrypoint script
 
-The entrypoint starts each service in order, waits for dependencies, then runs IRRd in the foreground.
+The entrypoint script is the startup script for the container. It starts each service in order, waits for dependencies, then runs IRRd in the foreground.
+
+Because the database and Redis live in the same container, the script also bootstraps the `irrd` database, loads any bundled RPSL data and creates a Web UI admin account. Waiting for each dependency avoids race conditions during startup.
 
 Create *entrypoint.sh*:
 
@@ -220,9 +216,9 @@ The startup sequence is: PostgreSQL → Redis (no persistence) → schema migrat
 
 ### The IRRd configuration file
 
-See the [full configuration reference](https://irrd.readthedocs.io/en/stable/admins/configuration/) for all options. A lab instance needs very few.
+See the [full IRRd configuration reference](https://irrd.readthedocs.io/en/stable/admins/configuration/) for all IRRd configuration options. A lab instance needs very few features so our IRRd file is very simple. The _irrd.taml_ file below covers the basic database/Redis URLs, server listeners, authentication overrides and source definitions that are relevant to our simple setup.
 
-Create *irrd.yaml*:
+The *irrd.yaml* file is shown below:
 
 ```yaml
 irrd:
@@ -275,11 +271,11 @@ irrd:
             authoritative_non_strict_mode_dangerous: true
 ```
 
-Key settings:
+Key IRRd settings are:
 
 - Both `server.http.interface` and `server.whois.interface` bind to `0.0.0.0` so other lab nodes can reach the IRR server.
 - `server.whois.max_connections: 5` and `server.http.workers: 1` keep memory usage low (each WHOIS connection uses ~200 MB).
-- `rpki.roa_source: null` disables RPKI integration.
+- `rpki.roa_source: null` disables RPKI integration. We don't need it in a filtering lab.
 - `sources.LABRIR` is configured as authoritative with `authoritative_non_strict_mode_dangerous: true` to relax RPSL validation for lab objects.
 - `auth.override_password` is the MD5 hash of "mypassword", used for bypassing authentication when loading data.
 
@@ -306,7 +302,7 @@ mnt-by:         LAB-MNT
 source:         LABRIR
 ```
 
-All objects use **`LAB-MNT`** as their maintainer with the MD5 hash of "mypassword" (matching the override password in *irrd.yaml*). The **`source: LABRIR`** value must exactly match the source name in the IRRd configuration. When you use the container in an actual lab, you will load additional route, aut-num, and as-set objects describing your lab's routing policy.
+All objects use *LAB-MNT* as their maintainer with the MD5 hash of "mypassword", matching the override password in *irrd.yaml*. The *source: LABRIR* value must exactly match the source name in the IRRd configuration. When you use the container in a lab, you will load additional route, aut-num, and as-set objects describing your lab's routing policy.
 
 ### Building the IRRd image
 
@@ -319,26 +315,17 @@ $ docker build -t irrd-lab -f Dockerfile.irrd .
 
 ### Checking container health
 
-The `HEALTHCHECK` verifies PostgreSQL, Redis, and IRRd's WHOIS listener are all running:
+The `HEALTHCHECK` verifies PostgreSQL, Redis, and IRRd's WHOIS listener are all running. Run the command below to see the healthcheck status. If you used the same docker build command, above, the container name will be irrd-lab
 
 ```bash
-$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
-$ docker inspect --format '{{json .State.Health}}' <container_name>
+$ docker inspect --format '{{json .State.Health}}' irrd-lab
 ```
 
-A brief `starting` state or one failed probe during initialization is normal.
+A brief `starting` state or a few failed probes during initialization is normal.
 
-### Troubleshooting
+## Build the _bgpq4_ utility container image
 
-- **PostgreSQL issues** — Check `docker exec <container_name> cat /var/log/irrd/postgresql.log`
-- **Redis connection refused** — Verify with `docker exec <container_name> redis-cli ping`
-- **IRRd config errors** — Check `docker logs <container_name>`
-- **Slow startup** — Allow 15–30 seconds; wait for the "IRRd Lab Container Ready" log message
-- **`docker inspect` template error** — Use the container name, not the image name
-
-## Building the bgpq4 utility container image
-
-This lightweight Debian image provides bgpq4 and common network tools. It uses `sleep infinity` to stay running in a lab topology.
+The _bgpq4_ utility container image is a lightweight Debian image that provides bgpq4 and common network tools. It uses `sleep infinity` to stay running in a lab topology.
 
 Create *Dockerfile.bgpq4*:
 
@@ -370,8 +357,6 @@ $ cd irrd-lab
 $ docker build -t bgpq4-utils -f Dockerfile.bgpq4 .
 ```
 
-This build takes only a few seconds.
-
 ## Testing the containers with Docker
 
 Verify the containers work together using plain Docker (no network emulator required).
@@ -390,6 +375,7 @@ Wait for the IRRd container to finish initializing (15–30 seconds):
 
 ```bash
 $ docker logs -f irrd-test 2>&1 | grep -m1 "IRRd Lab Container Ready"
+$ docker inspect --format '{{json .State.Health}}' irrd-test
 ```
 
 ### Verify the WHOIS service
@@ -408,23 +394,13 @@ $ docker exec bgpq4-test sh -c 'echo "LAB-MNT" | nc irrd-test 43'
 
 This should return the `LAB-MNT` maintainer object.
 
-### Loading additional RPSL data
-
-Load additional RPSL objects into the running container:
-
-```bash
-$ docker cp my-lab-data.rpsl irrd-test:/tmp/lab-data.rpsl
-$ docker exec irrd-test irrd_load_database \
-    --config /etc/irrd.yaml --source LABRIR /tmp/lab-data.rpsl
-```
-
-The `irrd_load_database` command performs a bulk import that replaces all existing objects in the specified source.
-
 ### Clean up the test
 
 ```bash
 $ docker stop irrd-test bgpq4-test
 $ docker rm irrd-test bgpq4-test
+$ docker stop irrd-lab bgpq4-test
+$ docker rm irrd-lab bgpq4-test
 $ docker network rm irr-test-net
 ```
 
@@ -468,55 +444,18 @@ $ docker push ghcr.io/yourusername/bgpq4-utils:latest
 
 After pushing, set the packages to public visibility in your GitHub account settings if you want others to pull them without authentication.
 
-## Using the containers in lab topologies
-
-Reference the images by name in any Docker-capable network emulator.
-
-**Containerlab** topology file:
-
-```yaml
-topology:
-  nodes:
-    irrd:
-      kind: linux
-      image: yourusername/irrd-lab:latest
-    bgpq4:
-      kind: linux
-      image: yourusername/bgpq4-utils:latest
-```
-
-In a **GNS3** environment, add the Docker images as node templates through the GUI.
-
-**Docker Compose**:
-
-```yaml
-services:
-  irrd:
-    image: yourusername/irrd-lab:latest
-    networks:
-      - labnet
-  bgpq4:
-    image: yourusername/bgpq4-utils:latest
-    networks:
-      - labnet
-```
-
-The IRRd container listens on port 43 (WHOIS) and port 8080 (HTTP/Web UI). The bgpq4 container just needs network reachability to the IRRd container.
-
 ### Loading lab-specific RPSL data
 
 The IRRd container starts with only the base maintainer and contact objects. To load your lab's routing policy data, you have two options:
 
-1. **Bind-mount a data file** — Mount your RPSL file into the container at */etc/irrd/data/lab-irr-base.rpsl* before it starts. The entrypoint script will load this file automatically during initialization.
-2. **Load data after startup** — Copy your RPSL file into the running container and run `irrd_load_database`:
 
-```bash
-$ docker cp lab-data.rpsl <container_name>:/tmp/lab-data.rpsl
-$ docker exec <container_name> irrd_load_database \
-    --config /etc/irrd.yaml --source LABRIR /tmp/lab-data.rpsl
-```
 
-I will demonstrate both approaches in a future post.
+
+
+
+
+
+
 
 ## Conclusion
 
