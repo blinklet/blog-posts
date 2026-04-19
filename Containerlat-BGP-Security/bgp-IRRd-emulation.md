@@ -6,15 +6,15 @@ https://www.arin.net/resources/manage/irr/?utm_source=chatgpt.com#submitting-rou
 
 # Emulating an IRR Database with IRRd, bgpq4, and Containerlab for BGP Prefix Filter Testing
 
-Every day, Internet service providers make trust decisions about which routes to accept from their BGP peers. One of the most important tools they use is the Internet Routing Registry, or IRR — a public database where network operators register which IP prefixes they are authorized to announce. When a BGP neighbor sends a route advertisement, the receiving router checks whether that announcement matches what is registered in the IRR. If it does not match, the route is filtered out.
+Even today, Internet service providers (ISPs) make decisions about which BGP routing information to accept from their peers based on trust. 
 
-The standard tool for building these filters is [bgpq4](https://github.com/bgp/bgpq4), a command-line utility that queries IRR servers like [RADB](https://www.radb.net/) and generates router filter configurations automatically. Together, IRR data and bgpq4 form the most widely deployed BGP security mechanism on the Internet today. Yet most network engineers have never set up an IRR server themselves, and many have never seen how bgpq4 queries translate into working router filters.
+One of the most important tools they use is the Internet Routing Registry (IRR). It is a public database in which network operators register which IP prefixes they are authorized to announce. ISPs periodically pull information about other operators' prefixes from IRRs and use that information to build filters and access lists that help ensure they accept routes only from the operators authorized to announce those routes. 
 
-In this post, I will show you how to run your own IRR server using [IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) — the same software that powers production registries like RADB — entirely inside a [Containerlab](https://containerlab.dev/) lab environment. I will populate the IRR database with routing policy objects for a small three-AS network, use bgpq4 to generate [FRR](https://frrouting.org/) prefix-list filters from that data, and then demonstrate how those filters prevent a BGP peer from announcing prefixes it does not own.
+Obviously, building filters for thousands of routs requires automation. The standard tool for building these filters is [bgpq4](https://github.com/bgp/bgpq4), a command-line utility that queries IRR servers like [RADB](https://www.radb.net/) and generates router filter configurations automatically. Together, IRR data and bgpq4 form the most widely deployed BGP security mechanism on the Internet today. Yet, most network engineers have never set up an IRR server themselves, and many have never seen how bgpq4 queries translate into working router filters.
 
-Running your own IRRd instance means you can experiment freely: register any prefix, create any AS number, and test filter behavior without touching production infrastructure. Everything runs locally in containers on a single Linux host.
+In this post, I will show you how to run your own IRR server using [IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/), the same software that powers production registries like RADB, entirely inside a [Containerlab](https://containerlab.dev/) lab environment. I will populate the IRR database with routing policy objects for a small three-AS network, use bgpq4 to generate [FRR](https://frrouting.org/) prefix-list filters from that data, and then demonstrate how those filters prevent a BGP peer from announcing prefixes it does not own.
 
-This is the first post in a series on BGP security. Here, I focus on IRR-based prefix filtering, which is the first line of defense. In a future post, I will add RPKI (Resource Public Key Infrastructure) validation, which provides cryptographic proof of prefix ownership on top of the IRR data. A third post will combine both mechanisms in a full multi-AS topology with hijack and route-leak attack scenarios.
+Running your own IRRd instance means you can experiment freely with real-world BGP scenarios. You can register any prefix, create any AS number, and test filter behavior without touching production infrastructure. Everything runs locally in a network emulator on a single Linux host.
 
 By the end of this post, you will have a fully reproducible lab that demonstrates the complete IRR-based filtering workflow: from registering routing policy objects, to generating filters with bgpq4, to blocking an unauthorized BGP announcement.
 
@@ -24,25 +24,25 @@ Before building the lab, it helps to understand the four components we will be w
 
 ### What is an Internet Routing Registry?
 
-An Internet Routing Registry (IRR) is a database where network operators publish information about their routing policy. The data is expressed in a format called RPSL — Routing Policy Specification Language, defined in [RFC 2622](https://www.rfc-editor.org/rfc/rfc2622). The most important object types for prefix filtering are:
+An Internet Routing Registry (IRR) is a database in which network operators publish information about their routing policy. The data is expressed in a format called Routing Policy Specification Language, or RPSL, defined in [RFC 2622](https://www.rfc-editor.org/rfc/rfc2622). The most important object types for prefix filtering are:
 
-- **route** objects — map an IP prefix to the AS number authorized to originate it (for example, "198.51.100.0/24 is originated by AS100")
-- **aut-num** objects — describe an autonomous system and its peering policies
-- **as-set** objects — group multiple AS numbers together under a single name (for example, "AS-ISP-A contains AS100 and AS101"), which lets operators define filters for customers who have their own downstream customers
+- **route** objects map an IP prefix to the AS number authorized to originate it. For example, "198.51.100.0/24 is originated by AS100"
+- **aut-num** objects  describe an autonomous system and its peering policies
+- **as-set** objects group multiple AS numbers together under a single name which lets operators define filters for customers who have their own downstream customers. For example, "AS-ISP-A contains AS100 and AS101"
 
-IRR databases are operated by the five Regional Internet Registries (ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC) and by independent registries such as [RADB](https://www.radb.net/) and NTT's registry. Network operators query these registries to learn which prefixes each BGP peer is authorized to announce, and then build prefix filters from that data.
+IRR databases are operated by the five Regional Internet Registries (ARIN, RIPE NCC, APNIC, LACNIC, and AFRINIC) and by independent registries such as [RADB](https://www.radb.net/) and [NTT's registry](https://www.gin.ntt.net/support-center/policies-procedures/routing-registry/). Network operators query one or more registries to learn which prefixes each BGP peer is authorized to announce, and then build prefix filters from that data.
 
 ### What is IRRd?
 
-[IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) is open-source software that implements a full-featured IRR server. It is the same software that runs behind production registries like RADB. IRRd version 4 — the current release as of early 2026 — is maintained by [Reliably Coded](https://www.reliably.com/) with support from NTT, ARIN, and the community.
+[IRRd (Internet Routing Registry Daemon)](https://irrd.readthedocs.io/en/stable/) is open-source software that implements a full-featured IRR server. It is the same software that runs behind production registries like RADB. IRRd version 4, the current release as of early 2026, is maintained by [Reliably Coded](https://www.reliably.com/) with support from NTT, ARIN, and the open-source community.
 
-IRRd provides a WHOIS query interface on TCP port 43, which is the protocol that tools like bgpq4 use to retrieve routing policy data. Internally, it stores RPSL objects in a [PostgreSQL](https://www.postgresql.org/) database and uses [Redis](https://redis.io/) for inter-process communication. IRRd can operate in two modes: as an *authoritative* source that accepts local submissions (this is what we will use), or as a *mirror* that replicates data from other IRR databases.
+IRRd can operate in two modes: as an *authoritative* source that accepts local submissions (this is what we will use), or as a *mirror* that replicates data from other IRR databases. Tools like bgpq4 use the WHOIS protocol, defined by [RFC3912](https://datatracker.ietf.org/doc/html/rfc3912), to retrieve routing policy data from an IRR server. 
 
-For our lab, we will configure IRRd with a single authoritative source named `LABRIR` and load a small set of RPSL objects that represent our three-AS network. The full production deployment guide recommends 32 GB of RAM and 150 GB of storage, but those figures are for mirroring the entire Internet routing registry. Our lab has fewer than 20 objects and will run comfortably with minimal resources.
+For our lab, we will configure IRRd with a single authoritative source named `LABRIR` and load a small set of RPSL objects that represent our three-AS network.
 
 ### What is bgpq4?
 
-[bgpq4](https://github.com/bgp/bgpq4) is a command-line tool that queries an IRR server and generates router filter configurations. It supports output formats for Cisco IOS, Juniper JunOS, FRR, BIRD, Nokia, Mikrotik, Arista, Huawei, and others. By default, bgpq4 queries NTT's IRR mirror at `rr.ntt.net`, but the `-h` flag lets you point it at any IRR server — including our local IRRd instance.
+[bgpq4](https://github.com/bgp/bgpq4) is a command-line tool that queries an IRR server and generates router filter configurations. It supports output formats for many router operating systems such as Cisco IOS, Juniper JunOS, FRR, BIRD, Nokia, Mikrotik, Arista, Huawei, and more. By default, bgpq4 queries NTT's IRR mirror at `rr.ntt.net`, but the `-h` flag lets you point it at any IRR server — including our local IRRd instance.
 
 A typical bgpq4 command looks like this:
 
@@ -56,11 +56,11 @@ This tells bgpq4 to connect to the IRR server at `10.0.0.4`, query the `LABRIR` 
 
 The workflow mirrors what real-world network operators do every day:
 
-1. Network operators register their prefixes in an IRR by creating **route** objects (stored and served by IRRd)
-2. A neighboring operator runs **bgpq4** to query the IRR and generate prefix-list filters for each BGP peer
-3. The operator applies those filters to the **FRR** (or other) router, which then only accepts route announcements that match the registered data
+1. Network operators register their prefixes in an IRR by creating *route* objects, which are then stored and served by IRRd.
+2. A neighboring operator runs *bgpq4* to query the IRR and generate prefix-list filters for each BGP peer
+3. The operator applies those filters to the *FRR* (or other) router, which then only accepts route announcements that match the registered data
 
-The only difference in our lab is that all three components — the IRR server, the filter generation tool, and the routers — run locally inside containers managed by Containerlab.
+The only difference in our lab is that all three components — the IRR server, the filter generation tool, and the routers — run locally inside containers managed by the Containerlab network emulator.
 
 ## Lab Architecture
 
@@ -80,15 +80,17 @@ The lab uses three autonomous systems connected in a hub-and-spoke topology, wit
 
 ISP-A and ISP-B reach the IRRd server by routing through Transit — the same way real-world operators reach public IRR servers over the Internet.
 
-Three ASes is the minimum needed to demonstrate transit filtering: a transit provider that applies prefix filters on inbound sessions from two peers. Using [RFC 5737](https://www.rfc-editor.org/rfc/rfc5737) documentation addresses for the announced prefixes keeps the lab completely self-contained.
+Three ASes is the minimum needed to demonstrate transit filtering: a transit provider that applies prefix filters on inbound sessions from two peers.
 
 ### Nodes
+
+The lab completely self-contained so you may use any IP addressing scheme you wish. Even so, I still like to use the [RFC1918](https://datatracker.ietf.org/doc/html/rfc1918) and [RFC5737](https://datatracker.ietf.org/doc/html/rfc5737) address spaces (private and documentation IP addresses).
 
 | Node | AS | Role | Announced Prefixes |
 |------|----|------|--------------------|
 | ISP-A | AS100 | Legitimate prefix holder | 198.51.100.0/24 |
 | ISP-B | AS200 | Peer; will later attempt an unauthorized announcement | 203.0.113.0/24 (own); later tries 198.51.100.0/24 |
-| Transit | AS300 | Transit provider; applies IRR-based prefix filters | 100.64.0.0/24 |
+| Transit | AS300 | Transit provider; applies IRR-based prefix filters | 192.0.2.0/24 |
 | IRRd | — | IRR database server (PostgreSQL + Redis + IRRd in a single container) | — |
 | bgpq4 | — | Utility container for running bgpq4 queries against IRRd | — |
 
@@ -736,7 +738,7 @@ topology:
         - configs/as300/daemons:/etc/frr/daemons
         - configs/as300/frr.conf:/etc/frr/frr.conf
       exec:
-        - ip addr add 100.64.0.1/24 dev lo
+        - ip addr add 192.0.2.1/24 dev lo
         - ip addr add 10.0.0.1/31 dev eth1
         - ip addr add 10.0.0.3/31 dev eth2
         - ip addr add 10.0.0.5/31 dev eth3
@@ -751,7 +753,7 @@ topology:
         - ip route add 10.0.0.0/29 via 10.0.0.5
         - ip route add 198.51.100.0/24 via 10.0.0.5
         - ip route add 203.0.113.0/24 via 10.0.0.5
-        - ip route add 100.64.0.0/24 via 10.0.0.5
+        - ip route add 192.0.2.0/24 via 10.0.0.5
 
     # ── bgpq4 utility container ──────────────────────────
     bgpq4:
@@ -854,10 +856,10 @@ frr version 10.5
 frr defaults traditional
 hostname as300
 !
-ip route 100.64.0.0/24 Null0
+ip route 192.0.2.0/24 Null0
 !
 router bgp 300
- bgp router-id 100.64.0.1
+ bgp router-id 192.0.2.1
  !
  neighbor 10.0.0.0 remote-as 100
  neighbor 10.0.0.0 description peer-AS100
@@ -865,7 +867,7 @@ router bgp 300
  neighbor 10.0.0.2 description peer-AS200
  !
  address-family ipv4 unicast
-  network 100.64.0.0/24
+  network 192.0.2.0/24
   network 10.0.0.4/31
   neighbor 10.0.0.0 activate
   neighbor 10.0.0.2 activate
@@ -931,7 +933,7 @@ You should see two established BGP peers (AS100 and AS200), each advertising one
 $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
 ```
 
-Expected output should include three prefixes: 198.51.100.0/24 (from AS100), 203.0.113.0/24 (from AS200), and 100.64.0.0/24 (locally originated by AS300).
+Expected output should include three prefixes: 198.51.100.0/24 (from AS100), 203.0.113.0/24 (from AS200), and 192.0.2.0/24 (locally originated by AS300).
 
 Verify that the dedicated query node can reach the IRRd server through AS300:
 
@@ -1036,7 +1038,7 @@ You should see:
 
 - **198.51.100.0/24** from AS100 — accepted (matches AS100-IN prefix-list)
 - **203.0.113.0/24** from AS200 — accepted (matches AS200-IN prefix-list)
-- **100.64.0.0/24** locally originated by AS300
+- **192.0.2.0/24** locally originated by AS300
 
 All three prefixes are present because each peer is announcing only its own authorized prefix. The filters are in place but have not blocked anything yet — the network is operating normally.
 
