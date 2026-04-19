@@ -115,7 +115,7 @@ Specific addressable nodes use IP addresses from the IP address range of their A
 | Link | Endpoint A | Address | Endpoint B | Address |
 |------|-----------|---------|-----------|---------|
 | IRRd – Transit-2  | irrd eth1  | 142.248.64.2/24 | as400 eth3 | 142.248.64.3/24 |
-| bgpq4 – Transit-1 | bgpq4 eth1 | 142.248.48.0/24 | as300 eth3 | 142.248.48.0/24 |
+| bgpq4 – Transit-1 | bgpq4 eth1 | 142.248.48.2/24 | as300 eth3 | 142.248.48.3/24 |
 | ISP-A network | loopback | 130.12.16.100/24 | — | — |
 | ISP-B network | loopback | 130.12.32.100/24 | — | — |
 
@@ -173,67 +173,78 @@ topology:
     # ── ISP-A (AS100) — Legitimate prefix holder ─────────
     as100:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.6.0
       binds:
         - configs/as100/daemons:/etc/frr/daemons
         - configs/as100/frr.conf:/etc/frr/frr.conf
       exec:
-        - ip addr add 198.51.100.1/24 dev lo
+        - ip addr add 130.12.16.100/24 dev lo
         - ip addr add 10.0.0.0/31 dev eth1
 
     # ── ISP-B (AS200) — Peer / will attempt hijack ───────
     as200:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.6.0
       binds:
         - configs/as200/daemons:/etc/frr/daemons
         - configs/as200/frr.conf:/etc/frr/frr.conf
       exec:
-        - ip addr add 203.0.113.1/24 dev lo
+        - ip addr add 131.143.32.100/24 dev lo
         - ip addr add 10.0.0.2/31 dev eth1
 
-    # ── Transit (AS300) — Applies IRR-based filters ───────
+    # ── Transit-1 (AS300) — Applies IRR-based filters ─────
     as300:
       kind: linux
-      image: quay.io/frrouting/frr:10.2.1
+      image: quay.io/frrouting/frr:10.6.0
       binds:
         - configs/as300/daemons:/etc/frr/daemons
         - configs/as300/frr.conf:/etc/frr/frr.conf
       exec:
-        - ip addr add 192.0.2.1/24 dev lo
+        - ip addr add 142.248.48.100/20 dev lo
         - ip addr add 10.0.0.1/31 dev eth1
-        - ip addr add 10.0.0.3/31 dev eth2
-        - ip addr add 10.0.0.5/31 dev eth3
-        - ip addr add 10.0.0.7/31 dev eth4
+        - ip addr add 10.0.0.4/31 dev eth2
+        - ip addr add 142.248.48.1/24 dev eth3
+
+    # ── Transit-2 (AS400) ──────────────────────────────────
+    as400:
+      kind: linux
+      image: quay.io/frrouting/frr:10.6.0
+      binds:
+        - configs/as400/daemons:/etc/frr/daemons
+        - configs/as400/frr.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 142.248.64.100/20 dev lo
+        - ip addr add 10.0.0.3/31 dev eth1
+        - ip addr add 10.0.0.5/31 dev eth2
+        - ip addr add 142.248.64.3/24 dev eth3
 
     # ── IRRd server (PostgreSQL + Redis + IRRd) ───────────
     irrd:
       kind: linux
       image: irrd-lab
       exec:
-        - ip addr add 10.0.0.4/31 dev eth1
-        - ip route add 10.0.0.0/29 via 10.0.0.5
-        - ip route add 198.51.100.0/24 via 10.0.0.5
-        - ip route add 203.0.113.0/24 via 10.0.0.5
-        - ip route add 192.0.2.0/24 via 10.0.0.5
+        - ip addr add 142.248.64.2/24 dev eth1
+        - ip route add default via 142.248.64.3
 
     # ── bgpq4 utility container ──────────────────────────
     bgpq4:
       kind: linux
       image: bgpq4-utils
       exec:
-        - ip addr add 10.0.0.6/31 dev eth1
-        - ip route add default via 10.0.0.7
+        - ip addr add 142.248.48.2/24 dev eth1
+        - ip route add default via 142.248.48.3
 
   links:
-    # AS100 (ISP-A) ↔ AS300 (Transit)
+    # AS100 (ISP-A) ↔ AS300 (Transit-1)
     - endpoints: ["as100:eth1", "as300:eth1"]
-    # AS200 (ISP-B) ↔ AS300 (Transit)
-    - endpoints: ["as200:eth1", "as300:eth2"]
-    # IRRd ↔ AS300 (Transit)
-    - endpoints: ["irrd:eth1", "as300:eth3"]
-    # bgpq4 ↔ AS300 (Transit)
-    - endpoints: ["bgpq4:eth1", "as300:eth4"]
+    # AS200 (ISP-B) ↔ AS400 (Transit-2)
+    - endpoints: ["as200:eth1", "as400:eth1"]
+    # AS300 (Transit-1) ↔ AS400 (Transit-2)
+    - endpoints: ["as300:eth2", "as400:eth2"]
+    # IRRd ↔ AS400 (Transit-2)
+    - endpoints: ["irrd:eth1", "as400:eth3"]
+    # bgpq4 ↔ AS300 (Transit-1)
+    - endpoints: ["bgpq4:eth1", "as300:eth3"]
 ```
 
 A few things to note in this topology:
