@@ -47,10 +47,10 @@ For our lab, we will configure IRRd with a single authoritative source named `LA
 A typical bgpq4 command looks like this:
 
 ```bash
-$ bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS100
+$ bgpq4 -h 142.248.64.2 -S LABRIR -l AS100-IN AS100
 ```
 
-This tells bgpq4 to connect to the IRR server at `10.0.0.4`, query the `LABRIR` source, find all prefixes that AS100 is authorized to originate, and output an FRR-compatible prefix-list named `AS100-IN`. The result is a set of `ip prefix-list` statements that you can paste directly into an FRR router's configuration.
+This tells bgpq4 to connect to the IRR server at `142.248.64.2`, query the `LABRIR` source, find all prefixes that AS100 is authorized to originate, and output an FRR-compatible prefix-list named `AS100-IN`. The result is a set of `ip prefix-list` statements that you can paste directly into an FRR router's configuration.
 
 ### How the pieces fit together
 
@@ -249,12 +249,12 @@ topology:
 
 A few things to note in this topology:
 
-- The four FRR nodes use the official `quay.io/frrouting/frr:10.2.1` image. The `binds:` stanzas inject the *daemons* and *frr.conf* files directly into each container at startup.
+- The four FRR nodes use the official `quay.io/frrouting/frr:10.6.0` image. The `binds:` stanzas inject the *daemons* and *frr.conf* files directly into each container at startup.
 - The `exec:` stanzas assign IP addresses to the loopback and point-to-point interfaces. FRR's *zebra* daemon picks up these addresses from the Linux kernel and makes them available for BGP to announce.
-- The **IRRd node** uses our custom `irrd-lab` image built in Part 4. The `lab-irr-base.rpsl` file is bind-mounted into `/etc/irrd/`, where the entrypoint script expects it. The `exec:` stanzas add static routes so the IRRd container can reach all four AS prefixes via AS300. The route to `10.0.0.0/29` covers all four point-to-point link subnets.
-- The **bgpq4 node** uses the `bgpq4-utils` image we built earlier. It has a single point-to-point link to AS300 (eth4) and a default route pointing to AS300 at 10.0.0.7. This gives it Layer 3 reachability to the IRRd server through AS300's forwarding.
-- AS300's FRR configuration includes `network 10.0.0.4/31` so that AS100 and AS200 learn routes to the IRRd subnet via BGP. This mirrors how operators in the real world reach public IRR servers like RADB — over the Internet, through their transit providers.
-- AS300 has **four** point-to-point interfaces: eth1–eth3 for the four BGP peers, and eth4 for the bgpq4 utility container.
+- The **IRRd node** uses our custom `irrd-lab` image. A single default route via AS400 (142.248.64.3) gives IRRd full reachability to all other nodes through AS400's BGP routing table.
+- The **bgpq4 node** uses the `bgpq4-utils` image. It has a single point-to-point link to AS300 (eth3) and a default route pointing to AS300 at 142.248.48.1. AS300 and AS400 carry reachability to the IRRd subnet (142.248.64.0/20) in their BGP tables, so bgpq4 can reach IRRd at 142.248.64.2 by routing through AS300 and then AS400.
+- AS300 (Transit-1) has **three** interfaces: eth1 to AS100, eth2 to AS400, and eth3 to the bgpq4 utility container.
+- AS400 (Transit-2) has **three** interfaces: eth1 to AS200, eth2 to AS300, and eth3 to the IRRd server.
 
 ### FRR Configuration Files
 
@@ -273,77 +273,103 @@ Only *bgpd* (for BGP) and *zebra* (for the kernel interface) are needed.
 
 #### AS100 — ISP-A (Legitimate Prefix Holder)
 
-AS100 announces 198.51.100.0/24 and peers with AS300. Create *irrd-lab/configs/as100/frr.conf*:
+AS100 announces 130.12.16.0/20 and peers with Transit-1 (AS300). Create *irrd-lab/configs/as100/frr.conf*:
 
 ```
 frr version 10.5
 frr defaults traditional
 hostname as100
 !
-ip route 198.51.100.0/24 Null0
+ip route 130.12.16.0/20 Null0
 !
 router bgp 100
- bgp router-id 198.51.100.1
+ bgp router-id 130.12.16.100
  !
  neighbor 10.0.0.1 remote-as 300
  neighbor 10.0.0.1 description transit-AS300
  !
  address-family ipv4 unicast
-  network 198.51.100.0/24
+  network 130.12.16.0/20
   neighbor 10.0.0.1 activate
  exit-address-family
 !
 ```
 
-The `ip route 198.51.100.0/24 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. The prefix address is also assigned to the loopback interface in the topology file's `exec:` stanza, which makes it reachable within the container.
+The `ip route 130.12.16.0/20 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. The loopback address 130.12.16.100 is assigned in the topology file's `exec:` stanza.
 
 #### AS200 — ISP-B (Peer / Future Attacker)
 
-AS200's baseline configuration only announces its own legitimate prefix, 203.0.113.0/24. Later, in the testing section, we will add an unauthorized announcement. Create *irrd-lab/configs/as200/frr.conf*:
+AS200's baseline configuration only announces its own legitimate prefix, 131.143.32.0/20. Later, in the testing section, we will add an unauthorized announcement. AS200 peers with Transit-2 (AS400) via 10.0.0.3. Create *irrd-lab/configs/as200/frr.conf*:
 
 ```
 frr version 10.5
 frr defaults traditional
 hostname as200
 !
-ip route 203.0.113.0/24 Null0
+ip route 131.143.32.0/20 Null0
 !
 router bgp 200
- bgp router-id 203.0.113.1
+ bgp router-id 131.143.32.100
  !
- neighbor 10.0.0.3 remote-as 300
- neighbor 10.0.0.3 description transit-AS300
+ neighbor 10.0.0.3 remote-as 400
+ neighbor 10.0.0.3 description transit-AS400
  !
  address-family ipv4 unicast
-  network 203.0.113.0/24
+  network 131.143.32.0/20
   neighbor 10.0.0.3 activate
  exit-address-family
 ```
 
-#### AS300 — Transit Provider
+#### AS300 — Transit-1
 
-AS300 peers with both AS100 and AS200. In this base configuration, it accepts all announcements with no prefix filtering — this is the unprotected baseline. AS300 also announces the 10.0.0.4/31 IRRd link subnet into BGP so that AS100 and AS200 can reach the IRR server. Create *irrd-lab/configs/as300/frr.conf*:
+AS300 (Transit-1) peers with AS100 to the west and AS400 (Transit-2) to the east. In this base configuration, it accepts all announcements with no prefix filtering — this is the unprotected baseline. AS300 announces its own 142.248.48.0/20 block, which covers the bgpq4 utility subnet (142.248.48.0/24). Create *irrd-lab/configs/as300/frr.conf*:
 
 ```
 frr version 10.5
 frr defaults traditional
 hostname as300
 !
-ip route 192.0.2.0/24 Null0
+ip route 142.248.48.0/20 Null0
 !
 router bgp 300
- bgp router-id 192.0.2.1
+ bgp router-id 142.248.48.100
  !
  neighbor 10.0.0.0 remote-as 100
  neighbor 10.0.0.0 description peer-AS100
- neighbor 10.0.0.2 remote-as 200
- neighbor 10.0.0.2 description peer-AS200
+ neighbor 10.0.0.5 remote-as 400
+ neighbor 10.0.0.5 description peer-AS400
  !
  address-family ipv4 unicast
-  network 192.0.2.0/24
-  network 10.0.0.4/31
+  network 142.248.48.0/20
   neighbor 10.0.0.0 activate
+  neighbor 10.0.0.5 activate
+ exit-address-family
+!
+```
+
+#### AS400 — Transit-2
+
+AS400 (Transit-2) peers with AS200 to the east and AS300 (Transit-1) to the west. The IRRd server is connected directly to AS400's eth3 interface at 142.248.64.2. AS400 announces its own 142.248.64.0/20 block, which covers the IRRd subnet (142.248.64.0/24), making IRRd reachable from anywhere in the lab via BGP. Create *irrd-lab/configs/as400/frr.conf*:
+
+```
+frr version 10.5
+frr defaults traditional
+hostname as400
+!
+ip route 142.248.64.0/20 Null0
+!
+router bgp 400
+ bgp router-id 142.248.64.100
+ !
+ neighbor 10.0.0.2 remote-as 200
+ neighbor 10.0.0.2 description peer-AS200
+ neighbor 10.0.0.4 remote-as 300
+ neighbor 10.0.0.4 description peer-AS300
+ !
+ address-family ipv4 unicast
+  network 142.248.64.0/20
   neighbor 10.0.0.2 activate
+  neighbor 10.0.0.4 activate
  exit-address-family
 !
 ```
@@ -369,7 +395,10 @@ irrd-lab/
     ├── as200/
     │   ├── daemons
     │   └── frr.conf
-    └── as300/
+    ├── as300/
+    │   ├── daemons
+    │   └── frr.conf
+    └── as400/
         ├── daemons
         └── frr.conf
 ```
@@ -388,39 +417,43 @@ Deploy the entire lab with a single command:
 $ sudo containerlab deploy -t topology.yml
 ```
 
-This brings up all five containers: four FRR routers, the IRRd server, and the bgpq4 utility container. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
+This brings up all six containers: four FRR routers, the IRRd server, and the bgpq4 utility container. The IRRd container needs 15–30 seconds to start PostgreSQL, run migrations, load the RPSL data, and start the WHOIS server. Wait for initialization to complete:
 
 ```bash
 $ docker logs -f clab-bgplab-irrd 2>&1 | grep -m1 "IRRd Lab Container Ready"
 ```
 
-Once IRRd is ready, verify that BGP sessions are established on AS300:
+Once IRRd is ready, verify that BGP sessions are established on both transit routers:
 
 ```bash
 $ docker exec clab-bgplab-as300 vtysh -c "show bgp summary"
 ```
 
-You should see two established BGP peers (AS100 and AS200), each advertising one prefix. Verify the full routing table:
+```bash
+$ docker exec clab-bgplab-as400 vtysh -c "show bgp summary"
+```
+
+AS300 should show two established BGP peers (AS100 and AS400). AS400 should show two established BGP peers (AS200 and AS300). Verify the full routing table on AS300:
 
 ```bash
 $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
 ```
 
-Expected output should include four prefixes: 198.51.100.0/24 (from AS100), 203.0.113.0/24 (from AS200), and 192.0.2.0/24 (locally originated by AS300).
+Expected output should include four prefixes: 130.12.16.0/20 (from AS100), 131.143.32.0/20 (relayed from AS200 via AS400), 142.248.48.0/20 (locally originated by AS300), and 142.248.64.0/20 (from AS400).
 
 Verify that the dedicated query node can reach the IRRd server through AS300:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "AS100" | nc 10.0.0.4 43'
+$ docker exec clab-bgplab-bgpq4 sh -lc 'echo "AS100" | nc 142.248.64.2 43'
 ```
 
-This confirms end-to-end connectivity: the bgpq4 utility container routes to the IRRd subnet (10.0.0.4/31) through AS300, and IRRd responds over WHOIS.
+This confirms end-to-end connectivity: the bgpq4 utility container routes to the IRRd server (142.248.64.2) through AS300 and AS400, and IRRd responds over WHOIS.
 
-This is the **baseline** state — all BGP announcements are accepted without filtering. AS300 trusts whatever its peers announce. In the next section, we will apply the IRR-based prefix filters generated by bgpq4 to restrict what AS300 accepts from each peer.
+This is the **baseline** state — all BGP announcements are accepted without filtering. AS300 and AS400 trust whatever their peers announce. In the next section, we will apply the IRR-based prefix filters generated by bgpq4 to restrict what each transit router accepts from its peers.
 
 ## Applying IRR-Based Prefix Filters
 
-Now for the payoff: we will use bgpq4 to query our IRRd server, generate prefix-lists, and apply them to AS300. This is the step where IRR data translates into working router filters that control which BGP announcements AS300 accepts from each peer.
+Now for the payoff: we will use bgpq4 to query our IRRd server, generate prefix-lists, and apply them to AS300 and AS400. This is the step where IRR data translates into working router filters that control which BGP announcements each transit router accepts from its directly connected peers.
 
 ### Generating and Applying the Filters
 
@@ -429,26 +462,26 @@ You can apply the filters manually or use the automation script we created earli
 Generate the prefix-list for AS100 by querying the IRRd server from the bgpq4 utility container:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS100-IN AS-ISP-A
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 142.248.64.2 -S LABRIR -l AS100-IN AS-ISP-A
 ```
 
 ```
 no ip prefix-list AS100-IN
-ip prefix-list AS100-IN permit 198.51.100.0/24
+ip prefix-list AS100-IN permit 130.12.16.0/20
 ```
 
 Generate the prefix-list for AS200:
 
 ```bash
-$ docker exec clab-bgplab-bgpq4 bgpq4 -h 10.0.0.4 -S LABRIR -l AS200-IN AS-ISP-B
+$ docker exec clab-bgplab-bgpq4 bgpq4 -h 142.248.64.2 -S LABRIR -l AS200-IN AS-ISP-B
 ```
 
 ```
 no ip prefix-list AS200-IN
-ip prefix-list AS200-IN permit 203.0.113.0/24
+ip prefix-list AS200-IN permit 131.143.32.0/20
 ```
 
-Now apply these prefix-lists to AS300, along with route-maps that attach them to each BGP neighbor's inbound session. Enter AS300's vtysh and configure:
+Now apply the AS100-IN prefix-list to AS300, where AS100 is directly connected. Enter AS300's vtysh and configure:
 
 ```bash
 $ docker exec -it clab-bgplab-as300 vtysh
@@ -457,9 +490,7 @@ $ docker exec -it clab-bgplab-as300 vtysh
 ```
 as300# configure terminal
 as300(config)# no ip prefix-list AS100-IN
-as300(config)# ip prefix-list AS100-IN permit 198.51.100.0/24
-as300(config)# no ip prefix-list AS200-IN
-as300(config)# ip prefix-list AS200-IN permit 203.0.113.0/24
+as300(config)# ip prefix-list AS100-IN permit 130.12.16.0/20
 as300(config)#
 as300(config)# route-map AS100-IN permit 10
 as300(config-route-map)# match ip address prefix-list AS100-IN
@@ -467,33 +498,46 @@ as300(config-route-map)# exit
 as300(config)# route-map AS100-IN deny 20
 as300(config-route-map)# exit
 as300(config)#
-as300(config)# route-map AS200-IN permit 10
-as300(config-route-map)# match ip address prefix-list AS200-IN
-as300(config-route-map)# exit
-as300(config)# route-map AS200-IN deny 20
-as300(config-route-map)# exit
-as300(config)#
 as300(config)# router bgp 300
 as300(config-router)# address-family ipv4 unicast
 as300(config-router-af)# neighbor 10.0.0.0 route-map AS100-IN in
-as300(config-router-af)# neighbor 10.0.0.2 route-map AS200-IN in
 as300(config-router-af)# end
 as300#
+as300# clear bgp ipv4 unicast * soft in
+```
+
+Then apply the AS200-IN prefix-list to AS400, where AS200 is directly connected. Enter AS400's vtysh and configure:
+
+```bash
+$ docker exec -it clab-bgplab-as400 vtysh
+```
+
+```
+as400# configure terminal
+as400(config)# no ip prefix-list AS200-IN
+as400(config)# ip prefix-list AS200-IN permit 131.143.32.0/20
+as400(config)#
+as400(config)# route-map AS200-IN permit 10
+as400(config-route-map)# match ip address prefix-list AS200-IN
+as400(config-route-map)# exit
+as400(config)# route-map AS200-IN deny 20
+as400(config-route-map)# exit
+as400(config)#
+as400(config)# router bgp 400
+as400(config-router)# address-family ipv4 unicast
+as400(config-router-af)# neighbor 10.0.0.2 route-map AS200-IN in
+as400(config-router-af)# end
+as400#
+as400# clear bgp ipv4 unicast * soft in
 ```
 
 The configuration has three layers:
 
-1. **Prefix-lists** define which prefixes are allowed — AS100-IN permits only 198.51.100.0/24, AS200-IN permits only 203.0.113.0/24
+1. **Prefix-lists** define which prefixes are allowed — AS100-IN permits only 130.12.16.0/20, AS200-IN permits only 131.143.32.0/20
 2. **Route-maps** reference the prefix-lists — sequence 10 permits matching prefixes, sequence 20 denies everything else
-3. **BGP neighbor configuration** applies the route-maps on each peer's inbound session — AS300 now filters what it accepts from AS100 (via 10.0.0.0) and AS200 (via 10.0.0.2)
+3. **BGP neighbor configuration** applies the route-maps on each peer's inbound session — AS300 filters what it accepts from AS100 (via 10.0.0.0), and AS400 filters what it accepts from AS200 (via 10.0.0.2)
 
-After applying the configuration, perform a soft inbound reset so that the filters take effect on the existing routes:
-
-```bash
-as300# clear bgp ipv4 unicast * soft in
-```
-
-Alternatively, you can skip the manual steps and run the automation script from Part 6, which does exactly the same thing:
+Alternatively, you can skip the manual steps and run the automation script from Part 6, which applies filters to both transit routers:
 
 ```bash
 $ ./generate-filters.sh
@@ -501,7 +545,7 @@ $ ./generate-filters.sh
 
 ### Verifying Filtered Operation
 
-Check that AS300's BGP table still contains the expected routes:
+Check that AS300's BGP table contains the expected routes:
 
 ```bash
 $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
@@ -509,13 +553,14 @@ $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp"
 
 You should see:
 
-- **198.51.100.0/24** from AS100 — accepted (matches AS100-IN prefix-list)
-- **203.0.113.0/24** from AS200 — accepted (matches AS200-IN prefix-list)
-- **192.0.2.0/24** locally originated by AS300
+- **130.12.16.0/20** from AS100 — accepted (matches AS100-IN prefix-list)
+- **131.143.32.0/20** from AS400 — accepted (AS400 filtered it from AS200 and propagated it to AS300)
+- **142.248.48.0/20** locally originated by AS300
+- **142.248.64.0/20** from AS400
 
 All four prefixes are present because each peer is announcing only its own authorized prefix. The filters are in place but have not blocked anything yet — the network is operating normally.
 
-Verify the prefix-lists are installed:
+Verify the prefix-list on AS300 is installed:
 
 ```bash
 $ docker exec clab-bgplab-as300 vtysh -c "show ip prefix-list"
@@ -525,9 +570,20 @@ Expected output:
 
 ```
 ip prefix-list AS100-IN: 1 entries
-   seq 5 permit 198.51.100.0/24
+   seq 5 permit 130.12.16.0/20
+```
+
+Verify the prefix-list on AS400 is installed:
+
+```bash
+$ docker exec clab-bgplab-as400 vtysh -c "show ip prefix-list"
+```
+
+Expected output:
+
+```
 ip prefix-list AS200-IN: 1 entries
-   seq 5 permit 203.0.113.0/24
+   seq 5 permit 131.143.32.0/20
 ```
 
 You can also confirm the route-maps are applied to the correct neighbors:
@@ -540,11 +596,19 @@ $ docker exec clab-bgplab-as300 vtysh -c "show ip bgp neighbors 10.0.0.0" | grep
   Route map for incoming advertisements is *AS100-IN
 ```
 
-The filters are active. AS300 will now reject any prefix from AS100 that is not 198.51.100.0/24, and any prefix from AS200 that is not 203.0.113.0/24. In the next section, we will test this by having AS200 attempt to announce a prefix it does not own.
+```bash
+$ docker exec clab-bgplab-as400 vtysh -c "show ip bgp neighbors 10.0.0.2" | grep "route-map"
+```
+
+```
+  Route map for incoming advertisements is *AS200-IN
+```
+
+The filters are active. AS300 will now reject any prefix from AS100 that is not 130.12.16.0/20, and AS400 will reject any prefix from AS200 that is not 131.143.32.0/20. In the next section, we will test this by having AS200 attempt to announce a prefix it does not own.
 
 ## Testing — The Unauthorized Announcement
 
-With the filters in place, we can now simulate a BGP prefix hijack and see the IRR-based filter block it. AS200 (ISP-B) will attempt to announce 198.51.100.0/24 — a prefix that belongs to AS100 and is not registered to AS200 in the IRR.
+With the filters in place, we can now simulate a BGP prefix hijack and see the IRR-based filter block it. AS200 (ISP-B) will attempt to announce 130.12.16.0/20 — a prefix that belongs to AS100 and is not registered to AS200 in the IRR.
 
 ### Simulating the Hijack
 
@@ -556,15 +620,15 @@ $ docker exec -it clab-bgplab-as200 vtysh
 
 ```
 as200# configure terminal
-as200(config)# ip route 198.51.100.0/24 Null0
+as200(config)# ip route 130.12.16.0/20 Null0
 as200(config)# router bgp 200
 as200(config-router)# address-family ipv4 unicast
-as200(config-router-af)# network 198.51.100.0/24
+as200(config-router-af)# network 130.12.16.0/20
 as200(config-router-af)# end
 as200#
 ```
 
-The `ip route 198.51.100.0/24 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. Without this route, BGP would not announce it. AS200 is now advertising two prefixes: its own legitimate 203.0.113.0/24 and the stolen 198.51.100.0/24.
+The `ip route 130.12.16.0/20 Null0` creates a blackhole static route so that BGP's `network` statement can find the prefix in the routing table. Without this route, BGP would not announce it. AS200 is now advertising two prefixes: its own legitimate 131.143.32.0/20 and the stolen 130.12.16.0/20.
 
 Verify that AS200 is indeed announcing both prefixes:
 
@@ -572,62 +636,62 @@ Verify that AS200 is indeed announcing both prefixes:
 $ docker exec clab-bgplab-as200 vtysh -c "show ip bgp"
 ```
 
-You should see both 203.0.113.0/24 and 198.51.100.0/24 listed with a status of `*>` (valid, best path, selected). AS200 believes it is announcing both prefixes to AS300.
+You should see both 131.143.32.0/20 and 130.12.16.0/20 listed with a status of `*>` (valid, best path, selected). AS200 believes it is announcing both prefixes to AS400.
 
 ### Observing the Filter in Action
 
-Now check AS300's BGP table to see what it actually accepted:
+Now check AS400's BGP table to see what it actually accepted from AS200:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 198.51.100.0/24"
+$ docker exec clab-bgplab-as400 vtysh -c "show ip bgp 130.12.16.0/20"
 ```
 
 Expected output:
 
 ```
-BGP routing table entry for 198.51.100.0/24, version X
+BGP routing table entry for 130.12.16.0/20, version X
 Paths: (1 available, best #1, table default)
   Advertised to non peer-group peers:
   10.0.0.2
-  100
-    10.0.0.0 from 10.0.0.0 (198.51.100.1)
+  300 100
+    10.0.0.4 from 10.0.0.4 (142.248.48.100)
       Origin IGP, metric 0, valid, external, best (First path received)
       Last update: ...
 ```
 
-Only **one path** is shown — the legitimate route from AS100 (via 10.0.0.0). The announcement from AS200 was filtered and rejected because 198.51.100.0/24 is not in the AS200-IN prefix-list. The filter worked exactly as designed.
+Only **one path** is shown — the legitimate route learned from AS300 (via 10.0.0.4), which itself learned it from AS100. The announcement from AS200 (via 10.0.0.2) was filtered and rejected because 130.12.16.0/20 is not in the AS200-IN prefix-list. The filter worked exactly as designed.
 
-Check the prefix-list counters to confirm the filter matched and denied the unauthorized announcement:
+Check the prefix-list counters on AS400 to confirm the filter matched and denied the unauthorized announcement:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "show ip prefix-list AS200-IN"
+$ docker exec clab-bgplab-as400 vtysh -c "show ip prefix-list AS200-IN"
 ```
 
 Expected output:
 
 ```
 ip prefix-list AS200-IN: 1 entries
-   seq 5 permit 203.0.113.0/24 (hit count: 1)
+   seq 5 permit 131.143.32.0/20 (hit count: 1)
 ```
 
-The permit entry shows a hit count for AS200's legitimate prefix. The unauthorized 198.51.100.0/24 did not match any permit entry and was denied by the implicit `deny any` at the end of the prefix-list.
+The permit entry shows a hit count for AS200's legitimate prefix. The unauthorized 130.12.16.0/20 did not match any permit entry and was denied by the implicit `deny any` at the end of the prefix-list.
 
-Verify that AS100's legitimate announcement is completely unaffected:
+Verify that AS200's legitimate announcement is completely unaffected:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 203.0.113.0/24"
+$ docker exec clab-bgplab-as400 vtysh -c "show ip bgp 131.143.32.0/20"
 ```
 
-AS200's own legitimate prefix (203.0.113.0/24) is still accepted — the filter only blocked the unauthorized announcement.
+AS200's own legitimate prefix (131.143.32.0/20) is still accepted — the filter only blocked the unauthorized announcement.
 
 ### What Happens Without Filters
 
-To understand why IRR-based filtering matters, consider what would happen if AS300 had no prefix filters. Temporarily remove the route-map from AS200's session:
+To understand why IRR-based filtering matters, consider what would happen if AS400 had no prefix filter on its AS200 session. Temporarily remove the route-map from AS200's inbound session on AS400:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "
+$ docker exec clab-bgplab-as400 vtysh -c "
 configure terminal
-router bgp 300
+router bgp 400
  address-family ipv4 unicast
   no neighbor 10.0.0.2 route-map AS200-IN in
 end
@@ -635,20 +699,20 @@ clear bgp ipv4 unicast * soft in
 "
 ```
 
-Now check the BGP table for 198.51.100.0/24:
+Now check the BGP table for 130.12.16.0/20 on AS400:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "show ip bgp 198.51.100.0/24"
+$ docker exec clab-bgplab-as400 vtysh -c "show ip bgp 130.12.16.0/20"
 ```
 
-Without the filter, AS300 now has **two paths** to 198.51.100.0/24: one from AS100 (the legitimate holder) and one from AS200 (the hijacker). BGP's best-path selection will choose one of them — and depending on tie-breaking rules, it might prefer AS200's path if the AS path length is shorter or the neighbor IP is lower. This is exactly how real-world prefix hijacks work: the hijacker's announcement competes with the legitimate one, and some routers on the Internet may prefer the hijacked path.
+Without the filter, AS400 now has **two paths** to 130.12.16.0/20: one from AS300 (the legitimate path, learned from AS100) and one from AS200 (the hijacker). BGP's best-path selection will choose one of them — and depending on tie-breaking rules, it might prefer AS200's path since it has a shorter AS path length ("200" vs "300 100"). This is exactly how real-world prefix hijacks work: the hijacker's announcement competes with the legitimate one, and some routers on the Internet may prefer the hijacked path.
 
 Restore the filter to re-secure the network:
 
 ```bash
-$ docker exec clab-bgplab-as300 vtysh -c "
+$ docker exec clab-bgplab-as400 vtysh -c "
 configure terminal
-router bgp 300
+router bgp 400
  address-family ipv4 unicast
   neighbor 10.0.0.2 route-map AS200-IN in
 end
