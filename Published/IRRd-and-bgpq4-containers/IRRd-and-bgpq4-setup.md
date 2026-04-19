@@ -19,7 +19,7 @@ I will also build the bgpq4 container on top of a lightweight Debian image that 
 
 ### Building the IRRd container image
 
-The IRRd image requires four files: a Dockerfile, an entrypoint script, an IRRd configuration file, and a base RPSL data file. Create them, as described below, and place them all in a project directory (I used the drectory name *irrd-lab*).
+The IRRd image requires four files: a Dockerfile, an entrypoint script, an IRRd configuration file, and a base RPSL data file. Create them, as described below, and place them all in a project directory (I used the directory name *irrd-lab*).
 
 ```
 $ mkdir irrd-lab
